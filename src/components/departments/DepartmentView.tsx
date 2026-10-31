@@ -80,6 +80,11 @@ export const DepartmentView: React.FC<DepartmentViewProps> = ({
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
             <div className="max-w-3xl space-y-3">
               <div className="flex items-center gap-3">
+                <img
+                  src="/images/jaya-education-trust-logo.png"
+                  alt="JAYA Education Trust"
+                  className="h-8 w-auto object-contain drop-shadow-[0_1px_3px_rgba(197,160,89,0.35)] shrink-0"
+                />
                 <span className="px-3 py-1 bg-[#C5A059] text-[#070F1E] text-xs font-bold font-mono uppercase tracking-wider rounded-xs">
                   {department.code}
                 </span>

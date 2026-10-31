@@ -31,10 +31,22 @@ export const AboutSection: React.FC = () => {
                 alt="Jaya Group Academic Convocation"
                 className="w-full h-[400px] object-cover"
               />
-              <div className="absolute -bottom-6 -right-6 bg-[#070F1E] text-white p-6 border-2 border-[#C5A059] shadow-xl max-w-[240px] hidden sm:block">
-                <p className="font-institutional-crest text-xs uppercase tracking-widest text-[#C5A059]">TRUST MOTTO</p>
-                <p className="font-institutional-serif text-lg italic mt-1 text-slate-100">
-                  "Knowledge with Character is True Enlightenment"
+              <div className="absolute -bottom-6 -right-6 bg-[#070F1E] text-white p-5 border-2 border-[#C5A059] shadow-xl max-w-[260px] hidden sm:block">
+                <div className="flex items-center gap-2 mb-2">
+                  <img
+                    src="/images/jaya-education-trust-logo.png"
+                    alt="Jaya Educational Trust"
+                    className="h-8 w-auto object-contain drop-shadow-xs"
+                  />
+                  <p className="font-institutional-crest text-[10px] uppercase tracking-widest text-[#C5A059] font-bold">
+                    TRUST MOTTO
+                  </p>
+                </div>
+                <p className="font-institutional-serif text-base italic text-slate-100 leading-snug">
+                  "Your Success is Our Service"
+                </p>
+                <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wider">
+                  Jaya Educational Trust • Estd. 1977
                 </p>
               </div>
             </div>

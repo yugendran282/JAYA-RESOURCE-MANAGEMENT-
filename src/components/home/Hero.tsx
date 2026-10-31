@@ -36,9 +36,14 @@ export const Hero: React.FC<HeroProps> = ({ onExploreInstitutions, onOpenAdmissi
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="inline-flex items-center gap-2.5 px-3.5 py-1.5 border border-[#C5A059]/40 bg-[#0B192C]/80 backdrop-blur-xs rounded-xs mb-6 text-xs text-[#EEDB96] uppercase tracking-[0.2em] font-medium"
+            className="inline-flex items-center gap-3 px-3.5 py-1.5 border border-[#C5A059]/40 bg-[#0B192C]/85 backdrop-blur-xs rounded-xs mb-6 text-xs text-[#EEDB96] uppercase tracking-[0.18em] font-medium shadow-md"
           >
-            <ShieldCheck className="w-4 h-4 text-[#C5A059]" />
+            <img
+              src="/images/jaya-education-trust-logo.png"
+              alt="Jaya Educational Trust Logo"
+              className="h-6 w-auto object-contain drop-shadow-[0_1px_3px_rgba(197,160,89,0.4)]"
+            />
+            <span className="h-3.5 w-[1px] bg-[#C5A059]/50" />
             <span>Pioneering Higher Education Since 1977</span>
           </motion.div>
 

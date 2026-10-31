@@ -85,13 +85,20 @@ export const ResourceRequestModal: React.FC<ResourceRequestModalProps> = ({
       <div className="bg-white rounded-xs border border-slate-300 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Modal Header */}
         <div className="bg-[#0B192C] text-white px-6 py-4 flex items-center justify-between border-b border-slate-700">
-          <div>
-            <span className="text-[10.5px] uppercase tracking-widest text-[#C5A059] font-bold">
-              Centralized Resource Management
-            </span>
-            <h3 className="font-institutional-serif text-lg font-bold text-white">
-              Official Resource & Equipment Requisition
-            </h3>
+          <div className="flex items-center gap-3">
+            <img
+              src="/images/jaya-education-trust-logo.png"
+              alt="JAYA Education Trust Logo"
+              className="h-10 w-auto object-contain drop-shadow-sm shrink-0"
+            />
+            <div>
+              <span className="text-[10px] uppercase tracking-widest text-[#C5A059] font-bold">
+                Centralized Resource Management
+              </span>
+              <h3 className="font-institutional-serif text-lg font-bold text-white">
+                Official Resource & Equipment Requisition
+              </h3>
+            </div>
           </div>
           <button
             onClick={onClose}

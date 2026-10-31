@@ -27,22 +27,29 @@ export const AdmissionsModal: React.FC<AdmissionsModalProps> = ({ isOpen, onClos
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#070F1E]/80 backdrop-blur-xs">
       <div className="bg-white rounded-xs border border-slate-300 shadow-2xl max-w-lg w-full overflow-hidden">
-        <div className="bg-[#0B192C] text-white p-6 relative border-b border-[#1E3E62]">
+        <div className="bg-[#0B192C] text-white p-6 relative border-b border-[#1E3E62] flex items-center gap-4">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
-          <span className="text-[10px] uppercase tracking-widest text-[#C5A059] font-bold">
-            Academic Year 2026-2027
-          </span>
-          <h3 className="font-institutional-serif text-xl font-bold text-white mt-1">
-            Admissions Inquiry & Prospectus
-          </h3>
-          <p className="text-xs text-slate-300 mt-1">
-            Jaya Group of Institutions • Thiruninravur & Chennai Campuses
-          </p>
+          <img
+            src="/images/jaya-education-trust-logo.png"
+            alt="JAYA Education Trust Logo"
+            className="h-12 w-auto object-contain drop-shadow-sm shrink-0"
+          />
+          <div>
+            <span className="text-[10px] uppercase tracking-widest text-[#C5A059] font-bold">
+              Academic Year 2026-2027
+            </span>
+            <h3 className="font-institutional-serif text-xl font-bold text-white mt-0.5">
+              Admissions Inquiry & Prospectus
+            </h3>
+            <p className="text-xs text-slate-300 mt-0.5">
+              Jaya Group of Institutions • Thiruninravur & Chennai Campuses
+            </p>
+          </div>
         </div>
 
         {submitted ? (

@@ -77,7 +77,12 @@ export const InstitutionView: React.FC<InstitutionViewProps> = ({
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
-            <div className="flex flex-wrap items-center gap-2 mb-4">
+            <div className="flex flex-wrap items-center gap-2.5 mb-4">
+              <img
+                src="/images/jaya-education-trust-logo.png"
+                alt="JAYA Education Trust"
+                className="h-8 w-auto object-contain drop-shadow-[0_1px_3px_rgba(197,160,89,0.35)] mr-1"
+              />
               <span className="px-3 py-1 bg-[#C5A059] text-[#070F1E] text-xs font-bold uppercase tracking-wider rounded-xs">
                 Estd. {institution.establishedYear}
               </span>

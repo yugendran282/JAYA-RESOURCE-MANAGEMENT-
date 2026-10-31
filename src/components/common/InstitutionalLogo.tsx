@@ -2,99 +2,78 @@ import React from 'react';
 
 interface InstitutionalLogoProps {
   variant?: 'light' | 'dark';
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   showTagline?: boolean;
+  showText?: boolean;
   className?: string;
+  subTitle?: string;
 }
 
 export const InstitutionalLogo: React.FC<InstitutionalLogoProps> = ({
   variant = 'dark',
   size = 'md',
   showTagline = true,
-  className = ''
+  showText = true,
+  className = '',
+  subTitle
 }) => {
-  const isDark = variant === 'dark'; // Dark text for light background
-  const textColor = isDark ? 'text-[#0B192C]' : 'text-white';
-  const subtitleColor = isDark ? 'text-slate-600' : 'text-slate-300';
-  const crestStroke = isDark ? '#0B192C' : '#FFFFFF';
+  const isDarkBg = variant === 'light'; // Light text for dark navy background
+  const textColor = isDarkBg ? 'text-white' : 'text-[#0B192C]';
+  const subtitleColor = isDarkBg ? 'text-slate-300' : 'text-slate-600';
   const goldColor = '#C5A059';
 
-  const iconSizes = {
-    sm: 'w-8 h-8',
-    md: 'w-11 h-11',
-    lg: 'w-16 h-16'
+  // Responsive, aspect-ratio-preserving heights for the official lighthouse emblem
+  const imageSizes = {
+    sm: 'h-8 sm:h-9 max-w-[42px]',
+    md: 'h-11 sm:h-12 max-w-[56px]',
+    lg: 'h-14 sm:h-16 max-w-[76px]',
+    xl: 'h-20 sm:h-24 max-w-[110px]'
   };
 
   const titleSizes = {
-    sm: 'text-sm font-bold tracking-wider',
-    md: 'text-base lg:text-lg font-bold tracking-wider',
-    lg: 'text-xl lg:text-2xl font-bold tracking-widest'
+    sm: 'text-xs sm:text-sm font-bold tracking-[0.14em]',
+    md: 'text-sm sm:text-base lg:text-lg font-bold tracking-[0.16em]',
+    lg: 'text-lg sm:text-xl lg:text-2xl font-bold tracking-[0.18em]',
+    xl: 'text-2xl sm:text-3xl font-bold tracking-[0.20em]'
+  };
+
+  const subTitleSizes = {
+    sm: 'text-[9px] sm:text-[10px] tracking-[0.20em]',
+    md: 'text-[10px] sm:text-[11px] tracking-[0.24em]',
+    lg: 'text-xs tracking-[0.26em]',
+    xl: 'text-sm tracking-[0.28em]'
   };
 
   return (
-    <div className={`flex items-center gap-3.5 select-none ${className}`}>
-      {/* Official Institutional Crest / Seal SVG */}
-      <div className={`relative flex-shrink-0 ${iconSizes[size]} flex items-center justify-center`}>
-        <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-sm" fill="none" xmlns="http://www.w3.org/2000/svg">
-          {/* Outer Shield / Crest Border */}
-          <path
-            d="M50 5 L88 20 C88 56 68 85 50 95 C32 85 12 56 12 20 Z"
-            fill={isDark ? '#0B192C' : '#0F223D'}
-            stroke={goldColor}
-            strokeWidth="3.5"
-          />
-          {/* Inner Inscribed Shield */}
-          <path
-            d="M50 12 L82 24 C82 52 65 77 50 86 C35 77 18 52 18 24 Z"
-            fill="none"
-            stroke={goldColor}
-            strokeWidth="1.2"
-            strokeDasharray="2 1"
-          />
-          {/* Open Book of Academic Distinction */}
-          <path
-            d="M32 50 C40 46 48 48 50 53 C52 48 60 46 68 50 L68 64 C60 60 52 62 50 67 C48 62 40 60 32 64 Z"
-            fill="#FFFFFF"
-            stroke={crestStroke}
-            strokeWidth="1.5"
-          />
-          {/* Central Flame / Torch of Wisdom */}
-          <path
-            d="M50 22 C47 28 44 32 46 36 C48 40 52 40 54 36 C56 32 53 28 50 22 Z"
-            fill={goldColor}
-          />
-          <circle cx="50" cy="38" r="1.5" fill="#FFFFFF" />
-          {/* Stylized Laurels */}
-          <path
-            d="M26 34 C24 38 24 43 27 47 M74 34 C76 38 76 43 73 47"
-            stroke={goldColor}
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-          {/* Foundation Banner Arc */}
-          <path
-            d="M32 76 C42 81 58 81 68 76"
-            stroke={goldColor}
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-        </svg>
+    <div className={`inline-flex items-center gap-3 sm:gap-4 select-none ${className}`}>
+      {/* Official JAYA Education Trust Lighthouse Logo */}
+      <div className={`relative shrink-0 flex items-center justify-center ${imageSizes[size]}`}>
+        <img
+          src="/images/jaya-education-trust-logo.png"
+          alt="JAYA Educational Trust Official Lighthouse Crest"
+          className={`w-full h-full object-contain ${
+            isDarkBg ? 'drop-shadow-[0_2px_8px_rgba(197,160,89,0.3)]' : 'drop-shadow-xs'
+          }`}
+          loading="eager"
+        />
       </div>
 
-      {/* Typography */}
-      <div className="flex flex-col leading-tight">
-        <span className={`font-institutional-crest ${titleSizes[size]} ${textColor} uppercase tracking-[0.14em]`}>
-          JAYA GROUP
-        </span>
-        <span className="font-institutional-crest text-[10px] md:text-[11px] font-semibold uppercase tracking-[0.24em] text-[#C5A059]">
-          OF INSTITUTIONS
-        </span>
-        {showTagline && size !== 'sm' && (
-          <span className={`text-[9.5px] uppercase tracking-widest mt-0.5 font-medium ${subtitleColor}`}>
-            Est. 1977 • Thiruninravur, Chennai
+      {/* Institutional Typography */}
+      {showText && (
+        <div className="flex flex-col leading-tight">
+          <span className={`font-institutional-crest ${titleSizes[size]} ${textColor} uppercase transition-colors`}>
+            JAYA GROUP
           </span>
-        )}
-      </div>
+          <span className={`font-institutional-crest ${subTitleSizes[size]} font-semibold uppercase text-[#C5A059]`}>
+            OF INSTITUTIONS
+          </span>
+          {showTagline && size !== 'sm' && (
+            <span className={`text-[9px] sm:text-[10px] uppercase tracking-wider mt-0.5 font-medium ${subtitleColor}`}>
+              {subTitle || 'Est. 1977 • Chennai, Tamil Nadu • "Your Success is Our Service"'}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 };
