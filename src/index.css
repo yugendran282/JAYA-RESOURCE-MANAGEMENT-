@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy-950: #060e18;
+  --color-navy-900: #0b192c;
+  --color-navy-850: #0f223d;
+  --color-navy-800: #132b4d;
+  --color-navy-700: #1e3e62;
+  --color-navy-600: #2a568c;
+  
+  --color-gold-900: #7a5e24;
+  --color-gold-800: #93712e;
+  --color-gold-700: #a98438;
+  --color-gold-600: #c5a059;
+  --color-gold-500: #d4af37;
+  --color-gold-400: #e0c567;
+  --color-gold-300: #eedb96;
+  --color-gold-100: #fbf7ec;
+  --color-gold-50: #fdfaf3;
+
+  --color-campus-stone: #f8f9fa;
+  --color-campus-cream: #faf8f5;
+  --color-campus-border: #e2e8f0;
+
+  --font-serif: "Playfair Display", Georgia, "Times New Roman", serif;
+  --font-cinzel: "Cinzel", "Times New Roman", serif;
+  --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+@layer base {
+  *, ::after, ::before {
+    box-sizing: border-box;
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: var(--font-sans);
+    color: #1e293b;
+    background-color: #fdfdfd;
+    overflow-x: hidden;
+  }
+
+  #root {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  h1, h2, h3, .font-institutional-serif {
+    font-family: var(--font-serif);
+    letter-spacing: -0.015em;
+  }
+
+  .font-institutional-crest {
+    font-family: var(--font-cinzel);
+    letter-spacing: 0.05em;
+  }
+}
+
+/* Institutional hairline borders & subtle shadows */
+.gold-accent-line {
+  height: 2px;
+  background: linear-gradient(90deg, #c5a059 0%, #eedb96 50%, #c5a059 100%);
+}
+
+.gold-accent-dot {
+  width: 6px;
+  height: 6px;
+  background: #c5a059;
+  border-radius: 9999px;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Print styling for reports */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+}
