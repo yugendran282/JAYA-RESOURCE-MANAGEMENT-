@@ -4,6 +4,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  username?: string;
   role: Role;
   institutionId?: string;
   institutionName?: string;
@@ -17,6 +18,7 @@ export interface User {
 export interface HodAccount {
   id: string;
   email: string;
+  username?: string;
   fullName: string;
   institutionId: string;
   institutionName: string;

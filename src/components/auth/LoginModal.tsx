@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { InstitutionalLogo } from '../common/InstitutionalLogo';
-import { X, Lock, Mail, ArrowRight, ShieldCheck, AlertCircle, Info, KeyRound } from 'lucide-react';
+import { AdminSetupModal } from './AdminSetupModal';
+import { X, Lock, User, ArrowRight, ShieldCheck, AlertCircle, Settings2, ShieldAlert } from 'lucide-react';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -10,12 +11,12 @@ interface LoginModalProps {
 }
 
 export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {
-  const { login } = useAuth();
-  const [email, setEmail] = useState('');
+  const { login, isAdminSetupNeeded } = useAuth();
+  const [identifier, setIdentifier] = useState('jaya groups');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showDevPanel, setShowDevPanel] = useState(false);
+  const [showAdminSetupModal, setShowAdminSetupModal] = useState(false);
 
   if (!isOpen) return null;
 
@@ -25,13 +26,18 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
     setIsLoading(true);
 
     try {
-      const result = await login(email, password);
+      const result = await login(identifier, password);
       if (result.success) {
-        const lower = email.toLowerCase();
-        const role = lower.includes('admin') ? 'admin' : 'department_head';
+        const clean = identifier.trim().toLowerCase();
+        const role = (clean === 'jaya groups' || clean === 'jayagroups' || clean.includes('admin'))
+          ? 'admin'
+          : 'department_head';
         onLoginSuccess(role);
         onClose();
       } else {
+        if (result.isSetupRequired) {
+          setShowAdminSetupModal(true);
+        }
         setErrorMsg(result.message || 'Invalid institutional credentials.');
       }
     } catch (err: any) {
@@ -41,175 +47,173 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
     }
   };
 
-  // Helper for development testing only - strictly hidden in production builds
-  const isDevMode = import.meta.env.DEV;
-
-  const populateDevCredentials = (testEmail: string, testPass: string) => {
-    setEmail(testEmail);
-    setPassword(testPass);
+  const handleSelectAdminUsername = () => {
+    setIdentifier('jaya groups');
+    setPassword('');
+    setErrorMsg('');
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#070F1E]/85 backdrop-blur-xs">
-      <div className="bg-white rounded-xs border border-slate-300 shadow-2xl max-w-md w-full overflow-hidden">
-        {/* Header with Coat of Arms Seal */}
-        <div className="bg-[#0B192C] text-white p-6 relative text-center border-b border-[#1E3E62]">
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors cursor-pointer"
-            aria-label="Close authentication modal"
-          >
-            <X className="w-5 h-5" />
-          </button>
-
-          <InstitutionalLogo variant="light" size="sm" showTagline={false} className="justify-center mb-2" />
-          <h3 className="font-institutional-serif text-xl font-bold text-white mt-1">
-            Institutional Resource Management Console
-          </h3>
-          <p className="text-[10.5px] text-[#C5A059] tracking-wider uppercase font-semibold mt-1">
-            Central Authentication & Access Protocol
-          </p>
-        </div>
-
-        {/* Content Body */}
-        <div className="p-6 space-y-5">
-          {errorMsg && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xs flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
-              <span>{errorMsg}</span>
-            </div>
-          )}
-
-          {/* Secure Institutional Login Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-[11px] font-semibold uppercase text-slate-600 mb-1">
-                Institutional Email Address *
-              </label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="email"
-                  required
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@jaya.edu.in or hod.dept@college.jaya.edu.in"
-                  className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-xs focus:outline-none focus:border-[#0B192C]"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-semibold uppercase text-slate-600 mb-1">
-                Authorized Access Password *
-              </label>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="password"
-                  required
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
-                  className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-xs focus:outline-none focus:border-[#0B192C]"
-                />
-              </div>
-            </div>
-
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#070F1E]/85 backdrop-blur-xs">
+        <div className="bg-white rounded-xs border border-slate-300 shadow-2xl max-w-md w-full overflow-hidden">
+          {/* Header with Coat of Arms Seal */}
+          <div className="bg-[#0B192C] text-white p-6 relative text-center border-b border-[#1E3E62]">
             <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-2.5 bg-[#0B192C] hover:bg-[#1E3E62] text-[#EEDB96] font-semibold text-xs uppercase tracking-wider rounded-xs transition-colors shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              onClick={onClose}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              aria-label="Close authentication modal"
             >
-              {isLoading ? (
-                <span>Verifying Cryptographic Credentials...</span>
-              ) : (
-                <>
-                  <span>Authenticate Session</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </>
-              )}
+              <X className="w-5 h-5" />
             </button>
-          </form>
 
-          {/* Institutional Governance Notice */}
-          <div className="pt-2 border-t border-slate-100 text-center space-y-1">
-            <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-600 font-medium">
-              <ShieldCheck className="w-3.5 h-3.5 text-[#C5A059]" />
-              <span>Role-Based Access Control • Row Level Security Active</span>
-            </div>
-            <p className="text-[10px] text-slate-400 leading-tight">
-              Accounts are provisioned exclusively by the Central Trust Super Administrator. Public self-registration is strictly disabled under Anna University cyber governance protocols.
+            <InstitutionalLogo variant="light" size="sm" showTagline={false} className="justify-center mb-2" />
+            <h3 className="font-institutional-serif text-xl font-bold text-white mt-1">
+              Institutional Resource Management Console
+            </h3>
+            <p className="text-[10.5px] text-[#C5A059] tracking-wider uppercase font-semibold mt-1">
+              Central Authentication & Access Protocol
             </p>
           </div>
 
-          {/* 
-            DEVELOPMENT ENVIRONMENT ONLY DRAWER
-            Strictly guarded by import.meta.env.DEV.
-            Never compiled or exposed in production environments.
-          */}
-          {isDevMode && (
-            <div className="pt-2 border-t border-dashed border-slate-300">
+          {/* Content Body */}
+          <div className="p-6 space-y-4">
+            {/* Super Admin Username Display Badge */}
+            <div className="p-3 bg-[#0B192C]/5 border border-[#0B192C]/15 rounded-xs flex items-center justify-between">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">
+                  Designated Super Admin Username:
+                </span>
+                <span className="font-mono text-xs font-bold text-[#0B192C]">
+                  jaya groups
+                </span>
+              </div>
               <button
                 type="button"
-                onClick={() => setShowDevPanel(!showDevPanel)}
-                className="w-full text-center text-[10px] text-amber-700 hover:text-amber-900 font-semibold uppercase tracking-wider py-1 flex items-center justify-center gap-1 cursor-pointer"
+                onClick={handleSelectAdminUsername}
+                className="px-2.5 py-1 text-[10.5px] font-semibold bg-[#0B192C] text-[#EEDB96] rounded-xs hover:bg-[#1E3E62] transition-colors cursor-pointer"
               >
-                <KeyRound className="w-3 h-3" />
-                <span>{showDevPanel ? 'Hide Dev Environment Test Notes' : 'Dev Environment Test Notes (Local Dev Only)'}</span>
+                Use Admin ID
               </button>
-
-              {showDevPanel && (
-                <div className="mt-2 p-3 bg-amber-50/70 border border-amber-200 rounded-xs text-[10.5px] space-y-2 text-slate-700">
-                  <p className="font-bold text-amber-900 flex items-center gap-1">
-                    <Info className="w-3.5 h-3.5" />
-                    <span>Issued Test Credentials for Local Development:</span>
-                  </p>
-                  
-                  <div className="space-y-1 font-mono text-[10px]">
-                    <div
-                      onClick={() => populateDevCredentials('admin@jaya.edu.in', 'SuperAdmin@Jaya2026')}
-                      className="p-1.5 bg-white border border-amber-200 rounded-xs cursor-pointer hover:bg-amber-100 flex justify-between items-center"
-                    >
-                      <span><strong>Super Admin:</strong> admin@jaya.edu.in</span>
-                      <span className="text-amber-800">SuperAdmin@Jaya2026</span>
-                    </div>
-
-                    <div
-                      onClick={() => populateDevCredentials('hod.cse@jec.jaya.edu.in', 'JECcse@2026#')}
-                      className="p-1.5 bg-white border border-amber-200 rounded-xs cursor-pointer hover:bg-amber-100 flex justify-between items-center"
-                    >
-                      <span><strong>JEC CSE HOD:</strong> hod.cse@jec.jaya.edu.in</span>
-                      <span className="text-amber-800">JECcse@2026#</span>
-                    </div>
-
-                    <div
-                      onClick={() => populateDevCredentials('hod.csecs@jsec.jaya.edu.in', 'JSECcsecs@2026#')}
-                      className="p-1.5 bg-white border border-amber-200 rounded-xs cursor-pointer hover:bg-amber-100 flex justify-between items-center"
-                    >
-                      <span><strong>JSEC Cyber HOD:</strong> hod.csecs@jsec.jaya.edu.in</span>
-                      <span className="text-amber-800">JSECcsecs@2026#</span>
-                    </div>
-
-                    <div
-                      onClick={() => populateDevCredentials('hod.pharma@jcp.jaya.edu.in', 'JCPpharma@2026#')}
-                      className="p-1.5 bg-white border border-amber-200 rounded-xs cursor-pointer hover:bg-amber-100 flex justify-between items-center"
-                    >
-                      <span><strong>JCP Pharma HOD:</strong> hod.pharma@jcp.jaya.edu.in</span>
-                      <span className="text-amber-800">JCPpharma@2026#</span>
-                    </div>
-                  </div>
-                  <p className="text-[9.5px] text-slate-500 italic">
-                    Clicking any entry populates credentials for immediate verification. In production builds, this entire development panel is tree-shaken and excluded.
-                  </p>
-                </div>
-              )}
             </div>
-          )}
+
+            {/* Notice if Super Admin master password setup is needed */}
+            {isAdminSetupNeeded && (
+              <div className="p-3 bg-amber-50 border border-amber-300 rounded-xs text-amber-900 text-xs flex items-start gap-2.5">
+                <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-bold">Super Admin Password Setup Required</p>
+                  <p className="text-[11px] text-slate-600">
+                    Master credentials for <strong className="font-mono">jaya groups</strong> have not been established yet.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowAdminSetupModal(true)}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-900 underline hover:text-amber-950 mt-1 cursor-pointer"
+                  >
+                    <Settings2 className="w-3 h-3" />
+                    <span>Run Protected Master Setup Now</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {errorMsg && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xs flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
+
+            {/* Secure Authentication Form */}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-[11px] font-semibold uppercase text-slate-600 mb-1">
+                  Admin Username or Institutional Email *
+                </label>
+                <div className="relative">
+                  <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    required
+                    autoComplete="username"
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    placeholder='Enter "jaya groups" or HOD institutional email'
+                    className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-xs focus:outline-none focus:border-[#0B192C] font-mono"
+                  />
+                </div>
+                <span className="text-[10px] text-slate-400 mt-0.5 block">
+                  Super Admin: <code className="font-bold text-slate-700">jaya groups</code> | HODs: Individual issued email
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold uppercase text-slate-600 mb-1">
+                  Authorized Access Password *
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="password"
+                    required
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-xs focus:outline-none focus:border-[#0B192C]"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-2.5 bg-[#0B192C] hover:bg-[#1E3E62] text-[#EEDB96] font-semibold text-xs uppercase tracking-wider rounded-xs transition-colors shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {isLoading ? (
+                  <span>Verifying Credentials...</span>
+                ) : (
+                  <>
+                    <span>Authenticate Session</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </>
+                )}
+              </button>
+            </form>
+
+            {/* Institutional Governance Notice & Master Setup Link */}
+            <div className="pt-2 border-t border-slate-100 text-center space-y-1.5">
+              <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-600 font-medium">
+                <ShieldCheck className="w-3.5 h-3.5 text-[#C5A059]" />
+                <span>Supabase Auth & Row Level Security Enforced</span>
+              </div>
+              <p className="text-[10px] text-slate-400 leading-tight">
+                Central management is restricted to Super Admin (<span className="font-mono text-slate-600">jaya groups</span>). Department HOD accounts are provisioned exclusively through the executive console.
+              </p>
+
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowAdminSetupModal(true)}
+                  className="text-[10px] text-slate-500 hover:text-[#0B192C] underline cursor-pointer"
+                >
+                  Configure / Reset Super Admin Master Password
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Super Admin Protected Setup Modal */}
+      <AdminSetupModal
+        isOpen={showAdminSetupModal}
+        onClose={() => setShowAdminSetupModal(false)}
+        onSetupSuccess={() => {
+          setIdentifier('jaya groups');
+        }}
+      />
+    </>
   );
 };

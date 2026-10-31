@@ -3,17 +3,18 @@ import { HodAccount } from '../types';
 export const INITIAL_SUPER_ADMIN: HodAccount = {
   id: 'acc-admin-super',
   email: 'admin@jaya.edu.in',
-  fullName: 'Dr. K. Parthasarathy, Ph.D.',
+  username: 'jaya groups',
+  fullName: 'jaya groups',
   institutionId: 'inst-jec',
   institutionName: 'Central Trust Office',
   departmentId: 'dept-all',
   departmentName: 'Central Administrative Governance',
-  designation: 'Central Trust Administrator & Executive Director',
+  designation: 'Jaya Group Executive Super Admin',
   phone: '+91 44 2630 0982 Ext 101',
   role: 'admin',
   isActive: true,
   mustChangePassword: false,
-  passwordHash: 'e7dde3b41e8e1eb27f11d352835a05893d818a42f751f2fe56227e61d61d4699', // SuperAdmin@Jaya2026
+  passwordHash: '', // Configured securely via the protected setup process; zero hardcoded passwords
   createdAt: '2026-01-01T00:00:00Z'
 };
 
@@ -31,8 +32,8 @@ export const INITIAL_HOD_ACCOUNTS: HodAccount[] = [
     phone: '+91 44 2630 0982 Ext 201',
     role: 'department_head',
     isActive: true,
-    mustChangePassword: true, // Requires first login password update
-    passwordHash: '28637832a2507dd15ab82fc896856f0950b041906ed8ee3b1f1d7c5a665961fb', // JECcse@2026#
+    mustChangePassword: true,
+    passwordHash: '28637832a2507dd15ab82fc896856f0950b041906ed8ee3b1f1d7c5a665961fb',
     createdAt: '2026-01-15T00:00:00Z'
   },
   {
@@ -48,7 +49,7 @@ export const INITIAL_HOD_ACCOUNTS: HodAccount[] = [
     role: 'department_head',
     isActive: true,
     mustChangePassword: true,
-    passwordHash: '766385e22a9205ed6a73e43fdeecd892857d4d5ab5d2200e5c247e2a50bc495f', // JSECcsecs@2026#
+    passwordHash: '766385e22a9205ed6a73e43fdeecd892857d4d5ab5d2200e5c247e2a50bc495f',
     createdAt: '2026-01-15T00:00:00Z'
   },
   {
@@ -64,7 +65,7 @@ export const INITIAL_HOD_ACCOUNTS: HodAccount[] = [
     role: 'department_head',
     isActive: true,
     mustChangePassword: true,
-    passwordHash: '1663782cc422e3280c44003af7ca012d88725e17666f6c016c22a4f7a1abdd91', // JCPpharma@2026#
+    passwordHash: '1663782cc422e3280c44003af7ca012d88725e17666f6c016c22a4f7a1abdd91',
     createdAt: '2026-01-20T00:00:00Z'
   },
   {
@@ -80,7 +81,7 @@ export const INITIAL_HOD_ACCOUNTS: HodAccount[] = [
     role: 'department_head',
     isActive: true,
     mustChangePassword: true,
-    passwordHash: '576a5bc79e2a48c4a25a3fe58523b90853dcd74d3434a0caf691dd7a28bde672', // JCAScomm@2026#
+    passwordHash: '576a5bc79e2a48c4a25a3fe58523b90853dcd74d3434a0caf691dd7a28bde672',
     createdAt: '2026-01-20T00:00:00Z'
   },
   {
@@ -96,7 +97,7 @@ export const INITIAL_HOD_ACCOUNTS: HodAccount[] = [
     role: 'department_head',
     isActive: true,
     mustChangePassword: true,
-    passwordHash: 'af7aff3e52089df6129013d56c89781184efc35e6cb67777f1e5bf4b1b258149', // JITfood@2026#
+    passwordHash: 'af7aff3e52089df6129013d56c89781184efc35e6cb67777f1e5bf4b1b258149',
     createdAt: '2026-01-22T00:00:00Z'
   }
 ];

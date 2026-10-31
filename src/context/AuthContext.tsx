@@ -9,6 +9,7 @@ interface LoginResult {
   success: boolean;
   message?: string;
   mustChangePassword?: boolean;
+  isSetupRequired?: boolean;
 }
 
 interface CreateHodInput {
@@ -31,6 +32,10 @@ interface AuthContextType {
   logout: () => void;
   changePassword: (newPassword: string) => Promise<{ success: boolean; message: string }>;
   
+  // Super Admin Protected Master Setup
+  isAdminSetupNeeded: boolean;
+  setupSuperAdminPassword: (newPassword: string) => Promise<{ success: boolean; message: string }>;
+
   // Super Admin HOD Account Governance
   hodAccounts: HodAccount[];
   createHodAccount: (input: CreateHodInput) => Promise<{ success: boolean; account?: HodAccount; temporaryPassword?: string; message: string }>;
@@ -45,6 +50,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AUTH_STORAGE_KEY = 'jaya_auth_user_session_v3';
 const HOD_ACCOUNTS_STORAGE_KEY = 'jaya_hod_accounts_v3';
+const SUPER_ADMIN_VAULT_KEY = 'jaya_super_admin_sec_vault_v1';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // 1. Load active session
@@ -73,6 +79,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return INITIAL_HOD_ACCOUNTS;
   });
 
+  // 3. Load Super Admin master credential hash from protected vault (zero hardcoded passwords)
+  const [adminMasterHash, setAdminMasterHash] = useState<string>(() => {
+    try {
+      return localStorage.getItem(SUPER_ADMIN_VAULT_KEY) || '';
+    } catch {
+      return '';
+    }
+  });
+
+  const isAdminSetupNeeded = !adminMasterHash;
+
   // Sync session
   useEffect(() => {
     if (currentUser) {
@@ -88,21 +105,137 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [hodAccounts]);
 
   // --------------------------------------------------------------------------
-  // SECURE AUTHENTICATION (Supabase with Local Cryptographic Fallback)
+  // PROTECTED SUPER ADMIN MASTER PASSWORD SETUP (No Hardcoded Passwords)
   // --------------------------------------------------------------------------
-  const login = async (email: string, password: string): Promise<LoginResult> => {
-    const cleanEmail = email.trim().toLowerCase();
-    const cleanPassword = password.trim();
-
-    if (!cleanEmail || !cleanPassword) {
-      return { success: false, message: 'Institutional email and password are both required.' };
+  const setupSuperAdminPassword = async (newPassword: string): Promise<{ success: boolean; message: string }> => {
+    if (newPassword.length < 8) {
+      return { success: false, message: 'Master password must be at least 8 characters long.' };
+    }
+    if (!/[A-Za-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      return { success: false, message: 'Master password must contain both letters and numbers.' };
     }
 
-    // 1. If Supabase is connected, authenticate via Supabase Auth & RLS
+    try {
+      const newHash = await hashPassword(newPassword);
+      localStorage.setItem(SUPER_ADMIN_VAULT_KEY, newHash);
+      setAdminMasterHash(newHash);
+
+      // If Supabase is connected, configure or update Super Admin on Supabase Auth
+      if (isSupabaseConfigured() && supabase) {
+        try {
+          await supabase.auth.signUp({
+            email: INITIAL_SUPER_ADMIN.email,
+            password: newPassword,
+            options: {
+              data: {
+                username: 'jaya groups',
+                full_name: 'jaya groups',
+                role: 'admin'
+              }
+            }
+          });
+        } catch {
+          // Supabase sync attempt
+        }
+      }
+
+      return {
+        success: true,
+        message: 'Super Admin master credentials established for "jaya groups". You may now sign in.'
+      };
+    } catch (err: any) {
+      return { success: false, message: err.message || 'Failed to initialize master password.' };
+    }
+  };
+
+  // --------------------------------------------------------------------------
+  // SECURE AUTHENTICATION (Supabase with Local Cryptographic Vault Fallback)
+  // --------------------------------------------------------------------------
+  const login = async (identifier: string, password: string): Promise<LoginResult> => {
+    const cleanId = (identifier || '').trim().toLowerCase();
+    const cleanPassword = (password || '').trim();
+
+    if (!cleanId || !cleanPassword) {
+      return { success: false, message: 'Identifier and password are both required.' };
+    }
+
+    // 1. Check if Super Admin login (ID: "jaya groups" or "admin@jaya.edu.in")
+    const isSuperAdminId =
+      cleanId === 'jaya groups' ||
+      cleanId === 'jayagroups' ||
+      cleanId === 'admin@jaya.edu.in' ||
+      cleanId === 'admin';
+
+    if (isSuperAdminId) {
+      if (!adminMasterHash) {
+        return {
+          success: false,
+          isSetupRequired: true,
+          message: 'Super Admin master credentials have not been configured yet. Please complete the initial protected setup.'
+        };
+      }
+
+      // If Supabase is connected, authenticate via Supabase Auth
+      if (isSupabaseConfigured() && supabase) {
+        try {
+          const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+            email: INITIAL_SUPER_ADMIN.email,
+            password: cleanPassword,
+          });
+
+          if (!authError && authData.user) {
+            const adminUser: User = {
+              id: INITIAL_SUPER_ADMIN.id,
+              name: 'jaya groups',
+              username: 'jaya groups',
+              email: INITIAL_SUPER_ADMIN.email,
+              role: 'admin',
+              institutionId: INITIAL_SUPER_ADMIN.institutionId,
+              institutionName: INITIAL_SUPER_ADMIN.institutionName,
+              departmentId: INITIAL_SUPER_ADMIN.departmentId,
+              departmentName: INITIAL_SUPER_ADMIN.departmentName,
+              mustChangePassword: false,
+              isActive: true
+            };
+            setCurrentUser(adminUser);
+            return { success: true, mustChangePassword: false };
+          }
+        } catch {
+          // fallback to cryptographic vault check
+        }
+      }
+
+      // Cryptographic verification against stored master hash (zero hardcoded passwords)
+      const isMatch = await verifyPassword(cleanPassword, adminMasterHash);
+      if (isMatch) {
+        const adminUser: User = {
+          id: INITIAL_SUPER_ADMIN.id,
+          name: 'jaya groups',
+          username: 'jaya groups',
+          email: INITIAL_SUPER_ADMIN.email,
+          role: 'admin',
+          institutionId: INITIAL_SUPER_ADMIN.institutionId,
+          institutionName: INITIAL_SUPER_ADMIN.institutionName,
+          departmentId: INITIAL_SUPER_ADMIN.departmentId,
+          departmentName: INITIAL_SUPER_ADMIN.departmentName,
+          mustChangePassword: false,
+          isActive: true
+        };
+        setCurrentUser(adminUser);
+        return { success: true, mustChangePassword: false };
+      } else {
+        return {
+          success: false,
+          message: 'Invalid access credentials for Super Admin (jaya groups).'
+        };
+      }
+    }
+
+    // 2. If Supabase is connected, authenticate HOD via Supabase Auth & RLS
     if (isSupabaseConfigured() && supabase) {
       try {
         const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-          email: cleanEmail,
+          email: cleanId,
           password: cleanPassword,
         });
 
@@ -147,30 +280,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
-    // 2. Cryptographic Local Verification Mode
-    // Verify Super Admin
-    if (cleanEmail === INITIAL_SUPER_ADMIN.email.toLowerCase()) {
-      const isMatch = await verifyPassword(cleanPassword, INITIAL_SUPER_ADMIN.passwordHash);
-      if (isMatch) {
-        const adminUser: User = {
-          id: INITIAL_SUPER_ADMIN.id,
-          name: INITIAL_SUPER_ADMIN.fullName,
-          email: INITIAL_SUPER_ADMIN.email,
-          role: 'admin',
-          institutionId: INITIAL_SUPER_ADMIN.institutionId,
-          institutionName: INITIAL_SUPER_ADMIN.institutionName,
-          departmentId: INITIAL_SUPER_ADMIN.departmentId,
-          departmentName: INITIAL_SUPER_ADMIN.departmentName,
-          mustChangePassword: false,
-          isActive: true
-        };
-        setCurrentUser(adminUser);
-        return { success: true, mustChangePassword: false };
-      }
-    }
-
     // Verify Managed HOD Accounts
-    const matchedAccount = hodAccounts.find(acc => acc.email.toLowerCase() === cleanEmail);
+    const matchedAccount = hodAccounts.find(acc => acc.email.toLowerCase() === cleanId);
     if (!matchedAccount) {
       return {
         success: false,
@@ -426,6 +537,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         logout,
         changePassword,
+        isAdminSetupNeeded,
+        setupSuperAdminPassword,
         hodAccounts,
         createHodAccount,
         toggleHodStatus,

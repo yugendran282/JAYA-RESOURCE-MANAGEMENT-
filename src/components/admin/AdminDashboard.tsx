@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { Institution, Department, InventoryItem, ResourceRequest, RequestStatus, HodAccount } from '../../types';
+import { AdminSetupModal } from '../auth/AdminSetupModal';
 import {
   LayoutDashboard,
   Building2,
@@ -98,6 +99,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     title: string;
   } | null>(null);
   const [copiedKey, setCopiedKey] = useState(false);
+  const [showRotatePasswordModal, setShowRotatePasswordModal] = useState(false);
 
   // Inventory Filters
   const [invSearch, setInvSearch] = useState('');
@@ -197,20 +199,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
             <div>
               <p className="font-institutional-crest text-xs font-bold uppercase tracking-wider text-white">
-                JAYA GROUP OF INSTITUTIONS
+                JAYA GROUPS
               </p>
-              <p className="text-[10px] text-[#C5A059] tracking-widest uppercase">
-                Executive Administrative Management Console
+              <p className="text-[10px] text-[#C5A059] tracking-widest uppercase font-semibold">
+                Super Admin ID: {currentUser?.name || 'jaya groups'} • Executive Console
               </p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-950/60 text-emerald-400 border border-emerald-800 text-[11px] rounded-xs font-medium">
             <ShieldCheck className="w-3.5 h-3.5" />
             Central Authorized Session
           </span>
+
+          <button
+            onClick={() => setShowRotatePasswordModal(true)}
+            className="px-2.5 py-1.5 bg-[#1E3E62] hover:bg-[#2b5585] text-[#EEDB96] text-[11px] font-semibold rounded-xs border border-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer"
+            title="Configure or rotate Super Admin master credentials"
+          >
+            <Key className="w-3.5 h-3.5 text-[#C5A059]" />
+            <span className="hidden md:inline">Rotate Master Key</span>
+          </button>
 
           <button
             onClick={onBackToHome}
@@ -224,7 +235,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               logout();
               onBackToHome();
             }}
-            className="p-1.5 text-slate-400 hover:text-red-400 rounded transition-colors"
+            className="p-1.5 text-slate-400 hover:text-red-400 rounded transition-colors cursor-pointer"
             title="Sign Out"
           >
             <LogOut className="w-4 h-4" />
@@ -1924,6 +1935,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         </div>
       )}
+
+      {/* MODAL: SUPER ADMIN MASTER CREDENTIAL ROTATION */}
+      <AdminSetupModal
+        isOpen={showRotatePasswordModal}
+        onClose={() => setShowRotatePasswordModal(false)}
+      />
     </div>
   );
 };
