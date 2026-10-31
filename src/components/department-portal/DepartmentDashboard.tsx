@@ -43,10 +43,19 @@ export const DepartmentDashboard: React.FC<DepartmentDashboardProps> = ({
   } = useData();
   const { currentUser, logout, quickLogin, availableUsers } = useAuth();
 
-  // If user is department_head with a departmentId, lock to that department.
-  // Otherwise default to first available department (e.g., JEC CSE).
-  const defaultDeptId = currentUser?.departmentId || 'dept-jec-cse';
-  const [selectedDeptId, setSelectedDeptId] = useState<string>(defaultDeptId);
+  // If user is department_head with a departmentId, strictly lock to their own assigned department!
+  const isDeptHeadLocked = currentUser?.role === 'department_head' && Boolean(currentUser?.departmentId);
+  const effectiveDeptId = isDeptHeadLocked ? currentUser!.departmentId! : (currentUser?.departmentId || 'dept-jec-cse');
+  const [selectedDeptId, setSelectedDeptId] = useState<string>(effectiveDeptId);
+
+  // Sync if currentUser changes
+  React.useEffect(() => {
+    if (isDeptHeadLocked && currentUser?.departmentId) {
+      setSelectedDeptId(currentUser.departmentId);
+    }
+  }, [currentUser, isDeptHeadLocked]);
+
+  const activeDeptId = isDeptHeadLocked ? currentUser!.departmentId! : selectedDeptId;
 
   const [activeTab, setActiveTab] = useState<'overview' | 'laboratories' | 'inventory' | 'requests'>('overview');
 
@@ -58,7 +67,7 @@ export const DepartmentDashboard: React.FC<DepartmentDashboardProps> = ({
   const [newLabInCharge, setNewLabInCharge] = useState('');
   const [newLabCapacity, setNewLabCapacity] = useState(60);
 
-  const currentDept = departments.find(d => d.id === selectedDeptId) || departments[0];
+  const currentDept = departments.find(d => d.id === activeDeptId) || departments[0];
   const currentInst = currentDept ? institutions.find(i => i.id === currentDept.institutionId) : undefined;
   const deptInventory = currentDept ? getInventoryByDepartment(currentDept.id) : [];
   const deptRequests = currentDept ? getRequestsByDepartment(currentDept.id) : [];
@@ -125,21 +134,27 @@ export const DepartmentDashboard: React.FC<DepartmentDashboardProps> = ({
 
         {/* Quick Demo Switcher & Session Info */}
         <div className="flex items-center gap-3">
-          {/* Quick Dept Switcher for testing multiple department roles */}
-          <div className="hidden sm:flex items-center gap-2">
-            <span className="text-[10.5px] text-slate-400">Department Scope:</span>
-            <select
-              value={selectedDeptId}
-              onChange={(e) => setSelectedDeptId(e.target.value)}
-              className="text-xs bg-[#070F1E] border border-slate-700 text-[#EEDB96] py-1 px-2 rounded-xs"
-            >
-              {departments.map(d => (
-                <option key={d.id} value={d.id}>
-                  {d.name} ({d.code})
-                </option>
-              ))}
-            </select>
-          </div>
+          {currentUser?.role === 'admin' ? (
+            <div className="hidden sm:flex items-center gap-2">
+              <span className="text-[10.5px] text-slate-400">Admin Dept Switcher:</span>
+              <select
+                value={selectedDeptId}
+                onChange={(e) => setSelectedDeptId(e.target.value)}
+                className="text-xs bg-[#070F1E] border border-slate-700 text-[#EEDB96] py-1 px-2 rounded-xs"
+              >
+                {departments.map(d => (
+                  <option key={d.id} value={d.id}>
+                    {d.name} ({d.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-950/80 text-emerald-300 border border-emerald-700 text-[11px] rounded-xs font-semibold">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Assigned HOD Security Scope: {currentDept.code}</span>
+            </span>
+          )}
 
           <button
             onClick={onBackToHome}

@@ -44,6 +44,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     metrics,
     updateRequestStatus,
     addInventoryItem,
+    updateDepartmentHod,
     resetToDefaultData
   } = useData();
   const { currentUser, logout, availableUsers } = useAuth();
@@ -51,6 +52,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [activeSection, setActiveSection] = useState<
     'overview' | 'institutions' | 'departments' | 'accounts' | 'inventory' | 'approvals' | 'reports'
   >('overview');
+
+  // Department Filters & HOD Assignment
+  const [deptInstFilter, setDeptInstFilter] = useState('all');
+  const [deptSearch, setDeptSearch] = useState('');
+  const [editingHodDept, setEditingHodDept] = useState<Department | null>(null);
+  const [hodFormName, setHodFormName] = useState('');
+  const [hodFormEmail, setHodFormEmail] = useState('');
+  const [hodFormPhone, setHodFormPhone] = useState('');
 
   // Inventory Filters
   const [invSearch, setInvSearch] = useState('');
@@ -484,13 +493,45 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {/* SECTION 3: DEPARTMENT DIRECTORY */}
           {activeSection === 'departments' && (
             <div className="space-y-6">
-              <div>
-                <h1 className="font-institutional-serif text-2xl font-bold text-[#0B192C]">
-                  Department Management & HOD Assignment
-                </h1>
-                <p className="text-xs text-slate-600 mt-1">
-                  Manage academic branches, assigned laboratory counts, faculty strength, and department heads.
-                </p>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h1 className="font-institutional-serif text-2xl font-bold text-[#0B192C]">
+                    Department Management & HOD Assignment
+                  </h1>
+                  <p className="text-xs text-slate-600 mt-1">
+                    Manage all 51 academic departments, assigned laboratory counts, faculty strength, and HOD assignments across the 9 institutions.
+                  </p>
+                </div>
+              </div>
+
+              {/* Department Filters */}
+              <div className="bg-white p-4 border border-slate-200 rounded-xs grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="relative">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search department title or code (e.g. CSE, BME, Food Tech)..."
+                    value={deptSearch}
+                    onChange={(e) => setDeptSearch(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 rounded-xs"
+                  />
+                </div>
+
+                <select
+                  value={deptInstFilter}
+                  onChange={(e) => setDeptInstFilter(e.target.value)}
+                  className="text-xs border border-slate-200 rounded-xs p-2 bg-white"
+                >
+                  <option value="all">All 9 Institutions ({departments.length} Total Departments)</option>
+                  {institutions.map(i => {
+                    const count = departments.filter(d => d.institutionId === i.id).length;
+                    return (
+                      <option key={i.id} value={i.id}>
+                        {i.name} ({count} Departments)
+                      </option>
+                    );
+                  })}
+                </select>
               </div>
 
               <div className="bg-white border border-slate-200 rounded-xs shadow-xs overflow-x-auto">
@@ -504,39 +545,151 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <th className="py-3 px-4">Labs Count</th>
                       <th className="py-3 px-4">Faculty</th>
                       <th className="py-3 px-4">Intake</th>
-                      <th className="py-3 px-4 text-right">Action</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {departments.map(dept => {
-                      const inst = institutions.find(i => i.id === dept.institutionId);
-                      return (
-                        <tr key={dept.id} className="hover:bg-slate-50">
-                          <td className="py-3 px-4 font-mono font-bold text-[#0B192C]">{dept.code}</td>
-                          <td className="py-3 px-4 font-semibold text-slate-900">{dept.name}</td>
-                          <td className="py-3 px-4 text-slate-600">{inst?.shortName}</td>
-                          <td className="py-3 px-4">
-                            <p className="font-medium text-slate-800">{dept.hod.name}</p>
-                            <p className="text-[10px] text-slate-500">{dept.hod.email}</p>
-                          </td>
-                          <td className="py-3 px-4 font-semibold text-[#0B192C]">{dept.laboratories.length} Labs</td>
-                          <td className="py-3 px-4 text-slate-700">{dept.facultyCount}</td>
-                          <td className="py-3 px-4 text-slate-700">{dept.studentIntake} seats</td>
-                          <td className="py-3 px-4 text-right">
-                            <button
-                              onClick={() => {
-                                if (onSelectDepartment) onSelectDepartment(dept.id);
-                              }}
-                              className="px-2.5 py-1 bg-slate-100 hover:bg-[#0B192C] hover:text-[#EEDB96] text-slate-700 font-semibold rounded-xs transition-colors"
-                            >
-                              Inspect
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                    {departments
+                      .filter(d => {
+                        const matchesInst = deptInstFilter === 'all' || d.institutionId === deptInstFilter;
+                        const matchesSearch = d.name.toLowerCase().includes(deptSearch.toLowerCase()) || d.code.toLowerCase().includes(deptSearch.toLowerCase());
+                        return matchesInst && matchesSearch;
+                      })
+                      .map(dept => {
+                        const inst = institutions.find(i => i.id === dept.institutionId);
+                        return (
+                          <tr key={dept.id} className="hover:bg-slate-50">
+                            <td className="py-3 px-4 font-mono font-bold text-[#0B192C]">{dept.code}</td>
+                            <td className="py-3 px-4 font-semibold text-slate-900">{dept.name}</td>
+                            <td className="py-3 px-4 text-slate-600 font-medium">{inst?.shortName}</td>
+                            <td className="py-3 px-4">
+                              <p className="font-medium text-slate-800">{dept.hod.name}</p>
+                              <p className="text-[10px] text-slate-500 font-mono">{dept.hod.email}</p>
+                            </td>
+                            <td className="py-3 px-4 font-semibold text-[#0B192C]">{dept.laboratories.length} Labs</td>
+                            <td className="py-3 px-4 text-slate-700">{dept.facultyCount}</td>
+                            <td className="py-3 px-4 text-slate-700">{dept.studentIntake} seats</td>
+                            <td className="py-3 px-4 text-right space-x-1.5">
+                              <button
+                                onClick={() => {
+                                  setEditingHodDept(dept);
+                                  setHodFormName(dept.hod.name);
+                                  setHodFormEmail(dept.hod.email);
+                                  setHodFormPhone(dept.hod.phone);
+                                }}
+                                className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xs text-[10.5px] font-semibold"
+                                title="Assign or Edit HOD"
+                              >
+                                Edit HOD
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (onSelectDepartment) onSelectDepartment(dept.id);
+                                }}
+                                className="px-2 py-1 bg-slate-100 hover:bg-[#0B192C] hover:text-[#EEDB96] text-slate-700 font-semibold rounded-xs transition-colors"
+                              >
+                                Inspect
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {/* Modal: Edit HOD Assignment */}
+          {editingHodDept && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#070F1E]/80 backdrop-blur-xs">
+              <div className="bg-white rounded-xs border border-slate-300 shadow-2xl max-w-md w-full p-6 text-xs text-slate-700">
+                <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-200">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-[#C5A059] tracking-wider">
+                      {editingHodDept.code} • Administrative Assignment
+                    </span>
+                    <h3 className="font-institutional-serif text-lg font-bold text-[#0B192C]">
+                      Assign HOD for {editingHodDept.name}
+                    </h3>
+                  </div>
+                  <button
+                    onClick={() => setEditingHodDept(null)}
+                    className="text-slate-400 hover:text-slate-800"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    updateDepartmentHod(editingHodDept.id, {
+                      name: hodFormName,
+                      email: hodFormEmail,
+                      phone: hodFormPhone
+                    });
+                    setEditingHodDept(null);
+                  }}
+                  className="space-y-4"
+                >
+                  <div>
+                    <label className="block text-[11px] font-semibold uppercase text-slate-600 mb-1">
+                      HOD Full Name & Degree *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={hodFormName}
+                      onChange={(e) => setHodFormName(e.target.value)}
+                      className="w-full p-2 border border-slate-300 rounded-xs text-xs"
+                      placeholder="e.g. Dr. S. Rajendran, M.E., Ph.D."
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold uppercase text-slate-600 mb-1">
+                      Official Institutional Email *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={hodFormEmail}
+                      onChange={(e) => setHodFormEmail(e.target.value)}
+                      className="w-full p-2 border border-slate-300 rounded-xs text-xs"
+                      placeholder="hod.dept@jec.jaya.edu.in"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold uppercase text-slate-600 mb-1">
+                      Department Phone / Extension
+                    </label>
+                    <input
+                      type="text"
+                      value={hodFormPhone}
+                      onChange={(e) => setHodFormPhone(e.target.value)}
+                      className="w-full p-2 border border-slate-300 rounded-xs text-xs"
+                      placeholder="+91 44 2630 0982 Ext 201"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => setEditingHodDept(null)}
+                      className="px-3.5 py-1.5 border border-slate-300 text-slate-600 rounded-xs cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-1.5 bg-[#0B192C] hover:bg-[#1E3E62] text-[#EEDB96] font-semibold rounded-xs cursor-pointer"
+                    >
+                      Save HOD Assignment
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
           )}

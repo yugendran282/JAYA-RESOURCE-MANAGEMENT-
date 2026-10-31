@@ -41,6 +41,7 @@ interface DataContextType {
   addLaboratory: (departmentId: string, lab: Omit<Laboratory, 'id'>) => void;
   addBench: (departmentId: string, bench: Omit<Bench, 'id'>) => void;
   updateBenchStatus: (departmentId: string, benchId: string, status: Bench['status']) => void;
+  updateDepartmentHod: (departmentId: string, hodData: { name: string; email: string; phone?: string; message?: string }) => void;
 
   // Stats
   metrics: {
@@ -59,10 +60,10 @@ interface DataContextType {
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 const STORAGE_KEYS = {
-  INSTITUTIONS: 'jaya_data_institutions_v1',
-  DEPARTMENTS: 'jaya_data_departments_v1',
-  INVENTORY: 'jaya_data_inventory_v1',
-  REQUESTS: 'jaya_data_requests_v1',
+  INSTITUTIONS: 'jaya_data_institutions_v2',
+  DEPARTMENTS: 'jaya_data_departments_v2',
+  INVENTORY: 'jaya_data_inventory_v2',
+  REQUESTS: 'jaya_data_requests_v2',
 };
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -78,7 +79,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [departments, setDepartments] = useState<Department[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.DEPARTMENTS);
-      return saved ? JSON.parse(saved) : DEFAULT_DEPARTMENTS;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length >= DEFAULT_DEPARTMENTS.length) {
+          return parsed;
+        }
+      }
+      return DEFAULT_DEPARTMENTS;
     } catch {
       return DEFAULT_DEPARTMENTS;
     }
@@ -87,7 +94,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [inventory, setInventory] = useState<InventoryItem[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.INVENTORY);
-      return saved ? JSON.parse(saved) : DEFAULT_INVENTORY;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length >= DEFAULT_INVENTORY.length) {
+          return parsed;
+        }
+      }
+      return DEFAULT_INVENTORY;
     } catch {
       return DEFAULT_INVENTORY;
     }
@@ -268,6 +281,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   };
 
+  const updateDepartmentHod = (
+    departmentId: string,
+    hodData: { name: string; email: string; phone?: string; message?: string }
+  ) => {
+    setDepartments(prev =>
+      prev.map(dept => {
+        if (dept.id !== departmentId) return dept;
+        return {
+          ...dept,
+          hod: {
+            ...dept.hod,
+            ...hodData
+          }
+        };
+      })
+    );
+  };
+
   const resetToDefaultData = () => {
     localStorage.removeItem(STORAGE_KEYS.INSTITUTIONS);
     localStorage.removeItem(STORAGE_KEYS.DEPARTMENTS);
@@ -308,6 +339,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addLaboratory,
         addBench,
         updateBenchStatus,
+        updateDepartmentHod,
         metrics: {
           totalInstitutions,
           totalDepartments,

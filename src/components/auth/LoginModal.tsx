@@ -72,60 +72,33 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
               Direct Evaluation Access (1-Click Login):
             </span>
 
-            <div className="grid grid-cols-1 gap-2">
-              <button
-                type="button"
-                onClick={() => handleSelectDemoUser(availableUsers[0])}
-                className="w-full p-2.5 bg-slate-50 hover:bg-[#0B192C] hover:text-white border border-slate-200 rounded-xs text-left transition-colors flex items-center justify-between group cursor-pointer"
-              >
-                <div>
-                  <p className="text-xs font-bold text-slate-900 group-hover:text-white">
-                    System Administrator (Central Trust)
-                  </p>
-                  <p className="text-[10px] text-slate-500 group-hover:text-slate-300 font-mono">
-                    admin@jaya.edu.in
-                  </p>
-                </div>
-                <span className="text-[10px] uppercase font-bold text-[#C5A059] px-2 py-0.5 bg-[#070F1E] rounded-xs">
-                  Admin
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleSelectDemoUser(availableUsers[1])}
-                className="w-full p-2.5 bg-slate-50 hover:bg-[#0B192C] hover:text-white border border-slate-200 rounded-xs text-left transition-colors flex items-center justify-between group cursor-pointer"
-              >
-                <div>
-                  <p className="text-xs font-bold text-slate-900 group-hover:text-white">
-                    HOD — Computer Science & Engg (JEC)
-                  </p>
-                  <p className="text-[10px] text-slate-500 group-hover:text-slate-300 font-mono">
-                    hod.cse@jec.jaya.edu.in
-                  </p>
-                </div>
-                <span className="text-[10px] uppercase font-bold text-[#C5A059] px-2 py-0.5 bg-[#070F1E] rounded-xs">
-                  Dept Head
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleSelectDemoUser(availableUsers[2])}
-                className="w-full p-2.5 bg-slate-50 hover:bg-[#0B192C] hover:text-white border border-slate-200 rounded-xs text-left transition-colors flex items-center justify-between group cursor-pointer"
-              >
-                <div>
-                  <p className="text-xs font-bold text-slate-900 group-hover:text-white">
-                    HOD — Pharmaceutics (JCP Chennai)
-                  </p>
-                  <p className="text-[10px] text-slate-500 group-hover:text-slate-300 font-mono">
-                    hod.pharma@jcp.jaya.edu.in
-                  </p>
-                </div>
-                <span className="text-[10px] uppercase font-bold text-[#C5A059] px-2 py-0.5 bg-[#070F1E] rounded-xs">
-                  Dept Head
-                </span>
-              </button>
+            <div className="grid grid-cols-1 gap-1.5 max-h-56 overflow-y-auto pr-1">
+              {availableUsers.map((user) => (
+                <button
+                  key={user.id}
+                  type="button"
+                  onClick={() => handleSelectDemoUser(user)}
+                  className="w-full p-2 bg-slate-50 hover:bg-[#0B192C] hover:text-white border border-slate-200 rounded-xs text-left transition-colors flex items-center justify-between group cursor-pointer"
+                >
+                  <div className="min-w-0 pr-2">
+                    <p className="text-xs font-bold text-slate-900 group-hover:text-white truncate">
+                      {user.role === 'admin'
+                        ? 'Trust System Administrator'
+                        : `HOD — ${user.departmentName}`}
+                    </p>
+                    <p className="text-[10px] text-slate-500 group-hover:text-slate-300 font-mono truncate">
+                      {user.email} {user.institutionName ? `• ${user.institutionName.split(' ')[1] || ''}` : ''}
+                    </p>
+                  </div>
+                  <span className={`text-[9.5px] uppercase font-bold px-2 py-0.5 rounded-xs shrink-0 ${
+                    user.role === 'admin' 
+                      ? 'text-[#C5A059] bg-[#070F1E]' 
+                      : 'text-slate-700 bg-slate-200 group-hover:bg-[#1E3E62] group-hover:text-[#EEDB96]'
+                  }`}>
+                    {user.role === 'admin' ? 'Admin' : 'HOD'}
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
 
