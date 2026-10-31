@@ -10,6 +10,27 @@ export interface User {
   departmentId?: string;
   departmentName?: string;
   avatar?: string;
+  mustChangePassword?: boolean;
+  isActive?: boolean;
+}
+
+export interface HodAccount {
+  id: string;
+  email: string;
+  fullName: string;
+  institutionId: string;
+  institutionName: string;
+  departmentId: string;
+  departmentName: string;
+  designation: string;
+  phone: string;
+  role: Role;
+  isActive: boolean;
+  mustChangePassword: boolean;
+  passwordHash: string;
+  temporaryPassword?: string;
+  createdAt: string;
+  lastLoginAt?: string;
 }
 
 export interface Institution {

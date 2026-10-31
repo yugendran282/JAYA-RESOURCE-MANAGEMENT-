@@ -14,6 +14,7 @@ import { DepartmentView } from './components/departments/DepartmentView';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { DepartmentDashboard } from './components/department-portal/DepartmentDashboard';
 import { LoginModal } from './components/auth/LoginModal';
+import { ChangePasswordModal } from './components/auth/ChangePasswordModal';
 import { AdmissionsModal } from './components/modals/AdmissionsModal';
 import { ResourceRequestModal } from './components/modals/ResourceRequestModal';
 
@@ -140,6 +141,8 @@ const AppContent: React.FC = () => {
         onClose={() => setIsLoginModalOpen(false)}
         onLoginSuccess={handleLoginSuccess}
       />
+
+      <ChangePasswordModal />
 
       <AdmissionsModal
         isOpen={isAdmissionsModalOpen}

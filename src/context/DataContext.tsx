@@ -198,16 +198,59 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
     );
 
-    // If allocated, optionally update inventory items status
-    if (status === 'Allocated' && allocatedAssetTags && allocatedAssetTags.length > 0) {
-      setInventory(prev =>
-        prev.map(item => {
-          if (allocatedAssetTags.includes(item.assetTag)) {
-            return { ...item, status: 'Reserved' };
-          }
-          return item;
-        })
-      );
+    // Update inventory ONLY when resources are actually issued/allocated
+    if (status === 'Allocated') {
+      const targetReq = resourceRequests.find(r => r.id === requestId);
+      if (targetReq) {
+        const tags = (allocatedAssetTags && allocatedAssetTags.length > 0)
+          ? allocatedAssetTags
+          : [`JAYA-${targetReq.departmentName.substring(0, 3).toUpperCase()}-REQ-${Math.floor(100 + Math.random() * 900)}`];
+
+        setInventory(prev => {
+          let updated = [...prev];
+          tags.forEach(tag => {
+            const existingIdx = updated.findIndex(i => i.assetTag.toLowerCase() === tag.toLowerCase());
+            if (existingIdx >= 0) {
+              updated[existingIdx] = {
+                ...updated[existingIdx],
+                status: 'In Use',
+                departmentId: targetReq.departmentId,
+                departmentName: targetReq.departmentName,
+                institutionId: targetReq.institutionId,
+                institutionName: targetReq.institutionName,
+                labId: targetReq.targetLaboratoryId,
+                labName: targetReq.targetLaboratoryName,
+                locationDetails: `Issued to ${targetReq.targetLaboratoryName || 'Department Lab'}`
+              };
+            } else {
+              // Newly issued equipment added to department inventory repository
+              const newlyIssuedItem: InventoryItem = {
+                id: `inv-issued-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                assetTag: tag,
+                name: targetReq.itemTitle,
+                category: 'Lab Equipment',
+                institutionId: targetReq.institutionId,
+                institutionName: targetReq.institutionName,
+                departmentId: targetReq.departmentId,
+                departmentName: targetReq.departmentName,
+                labId: targetReq.targetLaboratoryId,
+                labName: targetReq.targetLaboratoryName,
+                serialNumber: `SN-ISS-${Math.floor(100000 + Math.random() * 900000)}`,
+                makeModel: 'Institutional Standard Issue',
+                purchaseDate: new Date().toISOString().split('T')[0],
+                warrantyExpiry: new Date(Date.now() + 3 * 365 * 24 * 3600 * 1000).toISOString().split('T')[0],
+                status: 'In Use',
+                condition: 'Excellent',
+                quantity: targetReq.quantityRequested || 1,
+                unitCost: 85000,
+                locationDetails: targetReq.targetLaboratoryName || 'Academic Instruction Lab'
+              };
+              updated = [newlyIssuedItem, ...updated];
+            }
+          });
+          return updated;
+        });
+      }
     }
   };
 

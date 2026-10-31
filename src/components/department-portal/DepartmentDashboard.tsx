@@ -41,7 +41,7 @@ export const DepartmentDashboard: React.FC<DepartmentDashboardProps> = ({
     addBench,
     updateBenchStatus
   } = useData();
-  const { currentUser, logout, quickLogin, availableUsers } = useAuth();
+  const { currentUser, logout, isAdmin } = useAuth();
 
   // If user is department_head with a departmentId, strictly lock to their own assigned department!
   const isDeptHeadLocked = currentUser?.role === 'department_head' && Boolean(currentUser?.departmentId);
