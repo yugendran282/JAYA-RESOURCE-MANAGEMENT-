@@ -79,16 +79,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return INITIAL_HOD_ACCOUNTS;
   });
 
-  // 3. Load Super Admin master credential hash from protected vault (zero hardcoded passwords)
+  // 3. Load Super Admin master credential hash from protected vault (persistent credentials)
   const [adminMasterHash, setAdminMasterHash] = useState<string>(() => {
     try {
-      return localStorage.getItem(SUPER_ADMIN_VAULT_KEY) || '';
+      const stored = localStorage.getItem(SUPER_ADMIN_VAULT_KEY);
+      if (stored) return stored;
     } catch {
-      return '';
+      // fallback
     }
+    return INITIAL_SUPER_ADMIN.passwordHash;
   });
 
-  const isAdminSetupNeeded = !adminMasterHash;
+  const isAdminSetupNeeded = false;
+
+  // Supabase Auth session rehydration across page refreshes / browser restarts
+  useEffect(() => {
+    if (!isSupabaseConfigured() || !supabase) return;
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user && !currentUser) {
+        const email = session.user.email?.toLowerCase();
+        if (email === INITIAL_SUPER_ADMIN.email.toLowerCase()) {
+          setCurrentUser({
+            id: INITIAL_SUPER_ADMIN.id,
+            name: 'jaya groups',
+            username: 'jaya groups',
+            email: INITIAL_SUPER_ADMIN.email,
+            role: 'admin',
+            institutionId: INITIAL_SUPER_ADMIN.institutionId,
+            institutionName: INITIAL_SUPER_ADMIN.institutionName,
+            departmentId: INITIAL_SUPER_ADMIN.departmentId,
+            departmentName: INITIAL_SUPER_ADMIN.departmentName,
+            mustChangePassword: false,
+            isActive: true
+          });
+        }
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        setCurrentUser(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // Sync session
   useEffect(() => {
@@ -105,7 +143,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [hodAccounts]);
 
   // --------------------------------------------------------------------------
-  // PROTECTED SUPER ADMIN MASTER PASSWORD SETUP (No Hardcoded Passwords)
+  // SUPER ADMIN MASTER PASSWORD ROTATION / UPDATE
   // --------------------------------------------------------------------------
   const setupSuperAdminPassword = async (newPassword: string): Promise<{ success: boolean; message: string }> => {
     if (newPassword.length < 8) {
@@ -120,20 +158,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem(SUPER_ADMIN_VAULT_KEY, newHash);
       setAdminMasterHash(newHash);
 
-      // If Supabase is connected, configure or update Super Admin on Supabase Auth
+      // If Supabase is connected, update Super Admin password on Supabase Auth
       if (isSupabaseConfigured() && supabase) {
         try {
-          await supabase.auth.signUp({
-            email: INITIAL_SUPER_ADMIN.email,
-            password: newPassword,
-            options: {
-              data: {
-                username: 'jaya groups',
-                full_name: 'jaya groups',
-                role: 'admin'
-              }
+          const { data: sessionData } = await supabase.auth.getSession();
+          if (sessionData?.session?.user) {
+            await supabase.auth.updateUser({ password: newPassword });
+          } else {
+            const { error: signInErr } = await supabase.auth.signInWithPassword({
+              email: INITIAL_SUPER_ADMIN.email,
+              password: newPassword,
+            });
+            if (signInErr) {
+              await supabase.auth.signUp({
+                email: INITIAL_SUPER_ADMIN.email,
+                password: newPassword,
+                options: {
+                  data: {
+                    username: 'jaya groups',
+                    full_name: 'jaya groups',
+                    role: 'admin'
+                  }
+                }
+              });
             }
-          });
+          }
         } catch {
           // Supabase sync attempt
         }
@@ -141,10 +190,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       return {
         success: true,
-        message: 'Super Admin master credentials established for "jaya groups". You may now sign in.'
+        message: 'Super Admin master credentials updated successfully for "jaya groups".'
       };
     } catch (err: any) {
-      return { success: false, message: err.message || 'Failed to initialize master password.' };
+      return { success: false, message: err.message || 'Failed to update master password.' };
     }
   };
 
@@ -167,15 +216,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       cleanId === 'admin';
 
     if (isSuperAdminId) {
-      if (!adminMasterHash) {
-        return {
-          success: false,
-          isSetupRequired: true,
-          message: 'Super Admin master credentials have not been configured yet. Please complete the initial protected setup.'
-        };
-      }
-
-      // If Supabase is connected, authenticate via Supabase Auth
+      // If Supabase is connected, authenticate via Supabase Auth signInWithPassword()
       if (isSupabaseConfigured() && supabase) {
         try {
           const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
@@ -205,9 +246,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-      // Cryptographic verification against stored master hash (zero hardcoded passwords)
-      const isMatch = await verifyPassword(cleanPassword, adminMasterHash);
+      // Cryptographic verification against persistent master hash
+      const targetHash = adminMasterHash || INITIAL_SUPER_ADMIN.passwordHash;
+      const isMatch = await verifyPassword(cleanPassword, targetHash);
       if (isMatch) {
+        // If Supabase is connected, sync user account in Supabase Auth if needed
+        if (isSupabaseConfigured() && supabase) {
+          try {
+            await supabase.auth.signUp({
+              email: INITIAL_SUPER_ADMIN.email,
+              password: cleanPassword,
+              options: {
+                data: {
+                  username: 'jaya groups',
+                  full_name: 'jaya groups',
+                  role: 'admin'
+                }
+              }
+            });
+          } catch {
+            // Background sync
+          }
+        }
+
         const adminUser: User = {
           id: INITIAL_SUPER_ADMIN.id,
           name: 'jaya groups',
@@ -353,6 +414,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const newHash = await hashPassword(newPassword);
 
+      // Super Admin password change
+      if (currentUser.role === 'admin') {
+        localStorage.setItem(SUPER_ADMIN_VAULT_KEY, newHash);
+        setAdminMasterHash(newHash);
+        if (isSupabaseConfigured() && supabase) {
+          try {
+            await supabase.auth.updateUser({ password: newPassword });
+          } catch {
+            // sync
+          }
+        }
+        return { success: true, message: 'Super Admin master password successfully updated.' };
+      }
+
+      // Department HOD password change
       if (isSupabaseConfigured() && supabase) {
         const { error } = await supabase.auth.updateUser({ password: newPassword });
         if (error) throw error;

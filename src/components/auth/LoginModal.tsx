@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { InstitutionalLogo } from '../common/InstitutionalLogo';
-import { AdminSetupModal } from './AdminSetupModal';
 import {
   X,
   Lock,
@@ -9,8 +8,6 @@ import {
   ArrowRight,
   ShieldCheck,
   AlertCircle,
-  Settings2,
-  ShieldAlert,
   Building2,
   GraduationCap
 } from 'lucide-react';
@@ -22,13 +19,12 @@ interface LoginModalProps {
 }
 
 export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {
-  const { login, isAdminSetupNeeded } = useAuth();
+  const { login } = useAuth();
   const [loginMode, setLoginMode] = useState<'admin' | 'hod'>('admin');
   const [identifier, setIdentifier] = useState('jaya groups');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showAdminSetupModal, setShowAdminSetupModal] = useState(false);
 
   if (!isOpen) return null;
 
@@ -58,9 +54,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
         onLoginSuccess(role);
         onClose();
       } else {
-        if (result.isSetupRequired) {
-          setShowAdminSetupModal(true);
-        }
         setErrorMsg(result.message || 'Invalid institutional credentials.');
       }
     } catch (err: any) {
@@ -159,27 +152,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
               </div>
             )}
 
-            {/* Notice if Super Admin master password setup is needed */}
-            {loginMode === 'admin' && isAdminSetupNeeded && (
-              <div className="p-3 bg-amber-50 border border-amber-300 rounded-xs text-amber-900 text-xs flex items-start gap-2.5">
-                <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <p className="font-bold">Super Admin Password Setup Required</p>
-                  <p className="text-[11px] text-slate-600">
-                    Master credentials for <strong className="font-mono">jaya groups</strong> have not been established yet.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setShowAdminSetupModal(true)}
-                    className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-900 underline hover:text-amber-950 mt-1 cursor-pointer"
-                  >
-                    <Settings2 className="w-3 h-3" />
-                    <span>Run Protected Master Setup Now</span>
-                  </button>
-                </div>
-              </div>
-            )}
-
             {errorMsg && (
               <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xs flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
@@ -261,16 +233,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
           </div>
         </div>
       </div>
-
-      {/* Super Admin Protected Master Password Setup Modal */}
-      <AdminSetupModal
-        isOpen={showAdminSetupModal}
-        onClose={() => setShowAdminSetupModal(false)}
-        onSetupSuccess={() => {
-          setShowAdminSetupModal(false);
-          setErrorMsg('');
-        }}
-      />
     </>
   );
 };

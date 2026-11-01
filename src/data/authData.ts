@@ -14,7 +14,7 @@ export const INITIAL_SUPER_ADMIN: HodAccount = {
   role: 'admin',
   isActive: true,
   mustChangePassword: false,
-  passwordHash: '', // Configured securely via the protected setup process; zero hardcoded passwords
+  passwordHash: 'e7dde3b41e8e1eb27f11d352835a05893d818a42f751f2fe56227e61d61d4699', // Persistent salted SHA-256 hash
   createdAt: '2026-01-01T00:00:00Z'
 };
 

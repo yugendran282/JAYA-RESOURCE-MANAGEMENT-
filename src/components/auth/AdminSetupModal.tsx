@@ -78,11 +78,11 @@ export const AdminSetupModal: React.FC<AdminSetupModalProps> = ({
           
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-[#C5A059]/20 text-[#EEDB96] border border-[#C5A059]/40 rounded-xs text-[10.5px] uppercase font-bold tracking-wider mb-2">
             <ShieldCheck className="w-3.5 h-3.5 text-[#C5A059]" />
-            <span>Protected Master Credential Setup</span>
+            <span>Super Admin Master Key Management</span>
           </div>
 
           <h3 className="font-institutional-serif text-xl font-bold text-white">
-            Configure JAYA Groups Super Admin
+            Update Super Admin Master Password
           </h3>
           <p className="text-[11px] text-slate-300 tracking-wider font-medium mt-1">
             Designated Admin Login ID: <span className="font-mono text-[#EEDB96] font-bold">jaya groups</span>
@@ -92,9 +92,9 @@ export const AdminSetupModal: React.FC<AdminSetupModalProps> = ({
         {/* Content */}
         <div className="p-6 space-y-4">
           <div className="p-3 bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-xs leading-relaxed space-y-1">
-            <p className="font-semibold text-[#0B192C]">Zero-Hardcoded Credential Protocol:</p>
+            <p className="font-semibold text-[#0B192C]">Central Credential Protocol:</p>
             <p>
-              In accordance with institutional security policies, master passwords are never hardcoded or exposed in frontend source code. Establish the Super Admin master password below to initialize access for login ID <strong className="font-mono text-[#0B192C]">jaya groups</strong>.
+              Update the Super Admin master credentials for login ID <strong className="font-mono text-[#0B192C]">jaya groups</strong>. Once updated, new credentials are securely updated in Supabase Auth and take effect immediately across all sessions.
             </p>
           </div>
 
@@ -172,7 +172,7 @@ export const AdminSetupModal: React.FC<AdminSetupModalProps> = ({
                 disabled={isSubmitting}
                 className="px-5 py-2 bg-[#0B192C] hover:bg-[#1E3E62] text-[#EEDB96] font-semibold rounded-xs shadow-xs cursor-pointer disabled:opacity-50"
               >
-                {isSubmitting ? 'Encrypting & Initializing...' : 'Establish Master Password'}
+                {isSubmitting ? 'Updating Credentials...' : 'Update Master Password'}
               </button>
             </div>
           </form>
