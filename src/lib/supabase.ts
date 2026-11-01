@@ -27,7 +27,8 @@ export const isSupabaseConfigured = (): boolean => {
     supabaseUrl &&
     supabaseAnonKey &&
     supabaseUrl.startsWith('http') &&
-    !supabaseUrl.includes('your-project')
+    !supabaseUrl.includes('your-project') &&
+    !supabaseAnonKey.includes('placeholder')
   );
 };
 

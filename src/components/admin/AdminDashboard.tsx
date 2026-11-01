@@ -31,7 +31,8 @@ import {
   HelpCircle,
   ShieldAlert,
   Check,
-  X
+  X,
+  Edit3
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -61,6 +62,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     logout,
     hodAccounts,
     createHodAccount,
+    updateHodAccount,
     toggleHodStatus,
     resetHodPassword,
     deleteHodAccount
@@ -82,17 +84,46 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [showCreateHodModal, setShowCreateHodModal] = useState(false);
   const [newHodName, setNewHodName] = useState('');
   const [newHodEmail, setNewHodEmail] = useState('');
+  const [newHodUsername, setNewHodUsername] = useState('');
   const [newHodInstId, setNewHodInstId] = useState(institutions[0]?.id || 'inst-jec');
   const [newHodDeptId, setNewHodDeptId] = useState('');
   const [newHodDesignation, setNewHodDesignation] = useState('Professor & Head of Department');
   const [newHodPhone, setNewHodPhone] = useState('');
   const [hodCreateError, setHodCreateError] = useState('');
+
+  // HOD Search & Multi-level Filter State
   const [accountSearch, setAccountSearch] = useState('');
   const [accountStatusFilter, setAccountStatusFilter] = useState<'all' | 'active' | 'deactivated'>('all');
+  const [accountInstFilter, setAccountInstFilter] = useState('all');
+  const [accountDeptFilter, setAccountDeptFilter] = useState('all');
+
+  // HOD Account Edit State
+  const [editingAccount, setEditingAccount] = useState<HodAccount | null>(null);
+  const [editHodName, setEditHodName] = useState('');
+  const [editHodEmail, setEditHodEmail] = useState('');
+  const [editHodUsername, setEditHodUsername] = useState('');
+  const [editHodInstId, setEditHodInstId] = useState('');
+  const [editHodDeptId, setEditHodDeptId] = useState('');
+  const [editHodDesignation, setEditHodDesignation] = useState('');
+  const [editHodPhone, setEditHodPhone] = useState('');
+  const [editHodError, setEditHodError] = useState('');
+
+  const handleOpenEditAccount = (acc: HodAccount) => {
+    setEditingAccount(acc);
+    setEditHodName(acc.fullName);
+    setEditHodEmail(acc.email);
+    setEditHodUsername(acc.username || acc.email.split('@')[0]);
+    setEditHodInstId(acc.institutionId);
+    setEditHodDeptId(acc.departmentId);
+    setEditHodDesignation(acc.designation);
+    setEditHodPhone(acc.phone);
+    setEditHodError('');
+  };
 
   // Disclosure modal for newly issued or reset credentials
   const [credentialNotice, setCredentialNotice] = useState<{
     email: string;
+    loginId?: string;
     fullName: string;
     tempPassword: string;
     departmentName: string;
@@ -787,6 +818,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     setNewHodDeptId(firstDept?.id || '');
                     setNewHodName('');
                     setNewHodEmail('');
+                    setNewHodUsername('');
                     setNewHodDesignation('Professor & Head of Department');
                     setNewHodPhone('');
                     setHodCreateError('');
@@ -842,18 +874,47 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
               </div>
 
-              {/* Search & Filter Bar */}
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="relative flex-grow">
+              {/* Multi-Level Search & Filter Bar */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="relative">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
-                    placeholder="Search HOD by name, email, department or college..."
+                    placeholder="Search by HOD name, login ID, email..."
                     value={accountSearch}
                     onChange={(e) => setAccountSearch(e.target.value)}
                     className="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 rounded-xs bg-white"
                   />
                 </div>
+
+                <select
+                  value={accountInstFilter}
+                  onChange={(e) => {
+                    setAccountInstFilter(e.target.value);
+                    setAccountDeptFilter('all');
+                  }}
+                  className="text-xs border border-slate-200 rounded-xs p-2 bg-white"
+                >
+                  <option value="all">All Member Institutions</option>
+                  {institutions.map(inst => (
+                    <option key={inst.id} value={inst.id}>{inst.shortName}</option>
+                  ))}
+                </select>
+
+                <select
+                  value={accountDeptFilter}
+                  onChange={(e) => setAccountDeptFilter(e.target.value)}
+                  className="text-xs border border-slate-200 rounded-xs p-2 bg-white"
+                >
+                  <option value="all">All Constituent Departments</option>
+                  {departments
+                    .filter(d => accountInstFilter === 'all' || d.institutionId === accountInstFilter)
+                    .map(dept => (
+                      <option key={dept.id} value={dept.id}>
+                        {dept.name} ({dept.code})
+                      </option>
+                    ))}
+                </select>
 
                 <select
                   value={accountStatusFilter}
@@ -872,7 +933,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <thead className="bg-[#0B192C] text-white uppercase text-[10.5px]">
                     <tr>
                       <th className="py-3 px-4">Authorized HOD</th>
-                      <th className="py-3 px-4">Institutional Email</th>
+                      <th className="py-3 px-4">Login ID & Email</th>
                       <th className="py-3 px-4">Assigned Department (Exact Single Scope)</th>
                       <th className="py-3 px-4">Account Status</th>
                       <th className="py-3 px-4">Credential Status</th>
@@ -883,17 +944,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     {hodAccounts
                       .filter(acc => {
                         const s = accountSearch.toLowerCase();
-                        const matches =
+                        const matchesSearch =
                           acc.fullName.toLowerCase().includes(s) ||
                           acc.email.toLowerCase().includes(s) ||
+                          (acc.username && acc.username.toLowerCase().includes(s)) ||
                           acc.departmentName.toLowerCase().includes(s) ||
                           acc.institutionName.toLowerCase().includes(s);
-                        if (accountStatusFilter === 'active') return matches && acc.isActive;
-                        if (accountStatusFilter === 'deactivated') return matches && !acc.isActive;
-                        return matches;
+
+                        const matchesStatus =
+                          accountStatusFilter === 'all' ||
+                          (accountStatusFilter === 'active' && acc.isActive) ||
+                          (accountStatusFilter === 'deactivated' && !acc.isActive);
+
+                        const matchesInst =
+                          accountInstFilter === 'all' || acc.institutionId === accountInstFilter;
+
+                        const matchesDept =
+                          accountDeptFilter === 'all' || acc.departmentId === accountDeptFilter;
+
+                        return matchesSearch && matchesStatus && matchesInst && matchesDept;
                       })
                       .map(acc => {
                         const isSuperAdminUser = acc.role === 'admin';
+                        const displayLoginId = acc.username || acc.email.split('@')[0];
                         return (
                           <tr key={acc.id} className="hover:bg-slate-50 transition-colors">
                             <td className="py-3 px-4">
@@ -907,7 +980,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 </div>
                               </div>
                             </td>
-                            <td className="py-3 px-4 font-mono text-slate-700">{acc.email}</td>
+                            <td className="py-3 px-4">
+                              <div className="space-y-0.5">
+                                <span className="inline-flex items-center gap-1 font-mono text-[11px] font-bold text-[#0B192C] bg-slate-100 px-1.5 py-0.5 rounded-xs border border-slate-200">
+                                  <Key className="w-3 h-3 text-[#C5A059]" />
+                                  <span>{displayLoginId}</span>
+                                </span>
+                                <p className="font-mono text-[10.5px] text-slate-500">{acc.email}</p>
+                              </div>
+                            </td>
                             <td className="py-3 px-4">
                               <p className="font-medium text-[#0B192C]">{acc.departmentName}</p>
                               <p className="text-[10.5px] text-slate-500">{acc.institutionName}</p>
@@ -915,8 +996,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             <td className="py-3 px-4">
                               <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-xs text-[10.5px] font-semibold ${
                                 acc.isActive
-                                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                                  : 'bg-red-50 text-red-800 border border-red-200'
+                                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                    : 'bg-red-50 text-red-800 border border-red-200'
                               }`}>
                                 <span className={`w-1.5 h-1.5 rounded-full ${acc.isActive ? 'bg-emerald-500' : 'bg-red-500'}`} />
                                 <span>{acc.isActive ? 'Active' : 'Deactivated'}</span>
@@ -940,6 +1021,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 <span className="text-[10.5px] text-slate-400 italic">Super Admin Root</span>
                               ) : (
                                 <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    onClick={() => handleOpenEditAccount(acc)}
+                                    className="px-2 py-1 text-[11px] font-medium rounded-xs bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition-colors cursor-pointer flex items-center gap-1"
+                                    title="Edit HOD Account Details"
+                                  >
+                                    <Edit3 className="w-3 h-3 text-[#0B192C]" />
+                                    <span>Edit</span>
+                                  </button>
+
                                   <button
                                     onClick={async () => {
                                       const res = await toggleHodStatus(acc.id);
@@ -1552,6 +1642,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 const res = await createHodAccount({
                   fullName: newHodName,
                   email: newHodEmail,
+                  username: newHodUsername,
                   institutionId: newHodInstId,
                   departmentId: newHodDeptId,
                   designation: newHodDesignation,
@@ -1562,6 +1653,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   setShowCreateHodModal(false);
                   setCredentialNotice({
                     email: res.account.email,
+                    loginId: res.account.username || res.account.email.split('@')[0],
                     fullName: res.account.fullName,
                     tempPassword: res.temporaryPassword,
                     departmentName: res.account.departmentName,
@@ -1636,21 +1728,39 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 />
               </div>
 
-              <div>
-                <label className="block text-[11px] font-semibold uppercase text-slate-600 mb-1">
-                  Official Institutional Email *
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="e.g. hod.dept@jec.jaya.edu.in"
-                  value={newHodEmail}
-                  onChange={(e) => setNewHodEmail(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-xs font-mono"
-                />
-                <span className="text-[10px] text-slate-400 mt-0.5 block">
-                  Must be unique across all institutional domains.
-                </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-semibold uppercase text-slate-600 mb-1">
+                    Official Institutional Email *
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="e.g. hod.dept@jec.jaya.edu.in"
+                    value={newHodEmail}
+                    onChange={(e) => setNewHodEmail(e.target.value)}
+                    className="w-full p-2 border border-slate-300 rounded-xs font-mono"
+                  />
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">
+                    Must be unique across all domains.
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold uppercase text-slate-600 mb-1">
+                    Unique Login ID / Username (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. hod.cse (defaults to email prefix)"
+                    value={newHodUsername}
+                    onChange={(e) => setNewHodUsername(e.target.value)}
+                    className="w-full p-2 border border-slate-300 rounded-xs font-mono"
+                  />
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">
+                    Can be used by HOD to sign in.
+                  </span>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1707,6 +1817,188 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
 
+      {/* MODAL: EDIT HOD ACCOUNT */}
+      {editingAccount && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#070F1E]/80 backdrop-blur-xs">
+          <div className="bg-white rounded-xs border border-slate-300 shadow-2xl max-w-lg w-full overflow-hidden animate-fadeIn">
+            <div className="bg-[#0B192C] text-white p-5 flex items-center justify-between border-b border-[#1E3E62]">
+              <div className="flex items-center gap-2">
+                <Edit3 className="w-5 h-5 text-[#C5A059]" />
+                <h3 className="font-institutional-serif text-lg font-bold">
+                  Edit HOD Account Profile
+                </h3>
+              </div>
+              <button
+                onClick={() => setEditingAccount(null)}
+                className="text-slate-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setEditHodError('');
+                if (!editHodName.trim() || !editHodEmail.trim() || !editHodInstId || !editHodDeptId) {
+                  setEditHodError('All required fields marked with * must be completed.');
+                  return;
+                }
+
+                const res = await updateHodAccount({
+                  id: editingAccount.id,
+                  fullName: editHodName,
+                  email: editHodEmail,
+                  username: editHodUsername,
+                  institutionId: editHodInstId,
+                  departmentId: editHodDeptId,
+                  designation: editHodDesignation,
+                  phone: editHodPhone
+                });
+
+                if (res.success) {
+                  setEditingAccount(null);
+                } else {
+                  setEditHodError(res.message);
+                }
+              }}
+              className="p-6 space-y-4 text-xs"
+            >
+              {editHodError && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xs flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <span>{editHodError}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-semibold uppercase text-slate-600 mb-1">
+                    Member Institution *
+                  </label>
+                  <select
+                    value={editHodInstId}
+                    onChange={(e) => {
+                      const newInst = e.target.value;
+                      setEditHodInstId(newInst);
+                      const matchingDepts = departments.filter(d => d.institutionId === newInst);
+                      setEditHodDeptId(matchingDepts[0]?.id || '');
+                    }}
+                    className="w-full p-2 border border-slate-300 rounded-xs bg-white text-xs"
+                  >
+                    {institutions.map(i => (
+                      <option key={i.id} value={i.id}>{i.shortName}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold uppercase text-slate-600 mb-1">
+                    Assigned Department *
+                  </label>
+                  <select
+                    value={editHodDeptId}
+                    onChange={(e) => setEditHodDeptId(e.target.value)}
+                    className="w-full p-2 border border-slate-300 rounded-xs bg-white text-xs"
+                    required
+                  >
+                    {departments
+                      .filter(d => d.institutionId === editHodInstId)
+                      .map(d => (
+                        <option key={d.id} value={d.id}>
+                          {d.name} ({d.code})
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold uppercase text-slate-600 mb-1">
+                  HOD Full Name & Academic Qualifications *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editHodName}
+                  onChange={(e) => setEditHodName(e.target.value)}
+                  className="w-full p-2 border border-slate-300 rounded-xs"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-semibold uppercase text-slate-600 mb-1">
+                    Official Institutional Email *
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={editHodEmail}
+                    onChange={(e) => setEditHodEmail(e.target.value)}
+                    className="w-full p-2 border border-slate-300 rounded-xs font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold uppercase text-slate-600 mb-1">
+                    Unique Login ID / Username
+                  </label>
+                  <input
+                    type="text"
+                    value={editHodUsername}
+                    onChange={(e) => setEditHodUsername(e.target.value)}
+                    className="w-full p-2 border border-slate-300 rounded-xs font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-semibold uppercase text-slate-600 mb-1">
+                    Academic Designation
+                  </label>
+                  <input
+                    type="text"
+                    value={editHodDesignation}
+                    onChange={(e) => setEditHodDesignation(e.target.value)}
+                    className="w-full p-2 border border-slate-300 rounded-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold uppercase text-slate-600 mb-1">
+                    Official Contact Phone
+                  </label>
+                  <input
+                    type="text"
+                    value={editHodPhone}
+                    onChange={(e) => setEditHodPhone(e.target.value)}
+                    className="w-full p-2 border border-slate-300 rounded-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setEditingAccount(null)}
+                  className="px-4 py-2 border border-slate-300 text-slate-600 rounded-xs cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-[#0B192C] hover:bg-[#1E3E62] text-[#EEDB96] font-semibold rounded-xs shadow-xs cursor-pointer"
+                >
+                  Save Account Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* MODAL: CREDENTIAL DISCLOSURE NOTICE */}
       {credentialNotice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#070F1E]/90 backdrop-blur-xs">
@@ -1736,6 +2028,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <span className="text-[10.5px] uppercase font-bold text-slate-500 block">Department Scope:</span>
                   <span className="font-medium text-slate-800">{credentialNotice.departmentName}</span>
                 </div>
+
+                {credentialNotice.loginId && (
+                  <div>
+                    <span className="text-[10.5px] uppercase font-bold text-slate-500 block">Unique Login ID:</span>
+                    <span className="font-mono text-[#0B192C] font-bold text-xs bg-white px-2 py-0.5 border border-slate-300 rounded-xs inline-block">
+                      {credentialNotice.loginId}
+                    </span>
+                  </div>
+                )}
 
                 <div>
                   <span className="text-[10.5px] uppercase font-bold text-slate-500 block">Institutional Email:</span>

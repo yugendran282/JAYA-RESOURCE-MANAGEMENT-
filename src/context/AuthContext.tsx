@@ -12,9 +12,21 @@ interface LoginResult {
   isSetupRequired?: boolean;
 }
 
-interface CreateHodInput {
+export interface CreateHodInput {
   fullName: string;
   email: string;
+  username?: string;
+  institutionId: string;
+  departmentId: string;
+  designation?: string;
+  phone?: string;
+}
+
+export interface UpdateHodInput {
+  id: string;
+  fullName: string;
+  email: string;
+  username?: string;
   institutionId: string;
   departmentId: string;
   designation?: string;
@@ -39,6 +51,7 @@ interface AuthContextType {
   // Super Admin HOD Account Governance
   hodAccounts: HodAccount[];
   createHodAccount: (input: CreateHodInput) => Promise<{ success: boolean; account?: HodAccount; temporaryPassword?: string; message: string }>;
+  updateHodAccount: (input: UpdateHodInput) => Promise<{ success: boolean; message: string }>;
   toggleHodStatus: (accountId: string) => Promise<{ success: boolean; message: string }>;
   resetHodPassword: (accountId: string) => Promise<{ success: boolean; temporaryPassword?: string; message: string }>;
   deleteHodAccount: (accountId: string) => Promise<{ success: boolean; message: string }>;
@@ -341,8 +354,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
-    // Verify Managed HOD Accounts
-    const matchedAccount = hodAccounts.find(acc => acc.email.toLowerCase() === cleanId);
+    // Verify Managed HOD Accounts (by email or unique login ID)
+    const matchedAccount = hodAccounts.find(acc =>
+      acc.email.toLowerCase() === cleanId ||
+      (acc.username && acc.username.toLowerCase() === cleanId)
+    );
     if (!matchedAccount) {
       return {
         success: false,
@@ -370,6 +386,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       id: matchedAccount.id,
       name: matchedAccount.fullName,
       email: matchedAccount.email,
+      username: matchedAccount.username,
       role: matchedAccount.role,
       institutionId: matchedAccount.institutionId,
       institutionName: matchedAccount.institutionName,
@@ -477,6 +494,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: false, message: `An account with email ${cleanEmail} already exists.` };
     }
 
+    const cleanUsername = (input.username || '').trim().toLowerCase();
+    if (cleanUsername && hodAccounts.some(acc => acc.username && acc.username.toLowerCase() === cleanUsername)) {
+      return { success: false, message: `An account with login ID "${cleanUsername}" already exists.` };
+    }
+
     const inst = INSTITUTIONS.find(i => i.id === input.institutionId);
     const dept = DEPARTMENTS.find(d => d.id === input.departmentId);
 
@@ -492,10 +514,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Generate secure temporary password
     const tempPassword = generateTemporaryPassword();
     const tempHash = await hashPassword(tempPassword);
+    const finalUsername = cleanUsername || cleanEmail.split('@')[0];
+
+    // If Supabase is connected, create account via Supabase Auth & record in hod_accounts
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        const { data: authData } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password: tempPassword,
+          options: {
+            data: {
+              username: finalUsername,
+              full_name: input.fullName.trim(),
+              role: 'department_head',
+              institution_id: inst.id,
+              department_id: dept.id
+            }
+          }
+        });
+
+        if (authData?.user) {
+          await supabase.from('hod_accounts').insert({
+            id: authData.user.id,
+            email: cleanEmail,
+            full_name: input.fullName.trim(),
+            institution_id: inst.id,
+            department_id: dept.id,
+            designation: input.designation || 'Professor & Head',
+            phone: input.phone || '+91 44 2630 0982',
+            role: 'department_head',
+            is_active: true,
+            must_change_password: true
+          });
+        }
+      } catch (err) {
+        console.warn('Supabase remote sync note:', err);
+      }
+    }
 
     const newAccount: HodAccount = {
       id: `acc-hod-${Date.now()}`,
       email: cleanEmail,
+      username: finalUsername,
       fullName: input.fullName.trim(),
       institutionId: inst.id,
       institutionName: inst.name,
@@ -520,6 +580,81 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   };
 
+  const updateHodAccount = async (input: UpdateHodInput): Promise<{ success: boolean; message: string }> => {
+    if (currentUser?.role !== 'admin') {
+      return { success: false, message: 'Unauthorized. Only Super Admin can edit HOD accounts.' };
+    }
+
+    const target = hodAccounts.find(a => a.id === input.id);
+    if (!target) {
+      return { success: false, message: 'Account not found.' };
+    }
+
+    if (target.role === 'admin') {
+      return { success: false, message: 'Root Super Admin account cannot be edited here.' };
+    }
+
+    const cleanEmail = (input.email || target.email).trim().toLowerCase();
+    const cleanUsername = (input.username || target.username || '').trim().toLowerCase();
+
+    // Check email uniqueness if changed
+    if (cleanEmail !== target.email.toLowerCase() && hodAccounts.some(a => a.id !== input.id && a.email.toLowerCase() === cleanEmail)) {
+      return { success: false, message: `An account with email "${cleanEmail}" already exists.` };
+    }
+
+    // Check login ID uniqueness if changed
+    if (cleanUsername && cleanUsername !== (target.username || '').toLowerCase() && hodAccounts.some(a => a.id !== input.id && (a.username || '').toLowerCase() === cleanUsername)) {
+      return { success: false, message: `An account with login ID "${cleanUsername}" already exists.` };
+    }
+
+    const instId = input.institutionId || target.institutionId;
+    const deptId = input.departmentId || target.departmentId;
+
+    const inst = INSTITUTIONS.find(i => i.id === instId);
+    const dept = DEPARTMENTS.find(d => d.id === deptId);
+
+    if (!inst || !dept) {
+      return { success: false, message: 'Invalid institution or department selected.' };
+    }
+
+    if (dept.institutionId !== inst.id) {
+      return { success: false, message: 'The selected department does not belong to the selected institution.' };
+    }
+
+    // Sync to Supabase if configured
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        await supabase.from('hod_accounts').update({
+          email: cleanEmail,
+          full_name: input.fullName.trim(),
+          institution_id: inst.id,
+          department_id: dept.id,
+          designation: input.designation || target.designation,
+          phone: input.phone || target.phone,
+        }).eq('id', input.id);
+      } catch (err) {
+        console.warn('Supabase remote update note:', err);
+      }
+    }
+
+    setHodAccounts(prev =>
+      prev.map(a => a.id === input.id ? {
+        ...a,
+        email: cleanEmail,
+        username: cleanUsername || a.username,
+        fullName: input.fullName.trim(),
+        institutionId: inst.id,
+        institutionName: inst.name,
+        departmentId: dept.id,
+        departmentName: dept.name,
+        designation: input.designation || a.designation,
+        phone: input.phone || a.phone,
+      } : a)
+    );
+
+    return { success: true, message: 'HOD account details successfully updated.' };
+  };
+
   const toggleHodStatus = async (accountId: string): Promise<{ success: boolean; message: string }> => {
     if (currentUser?.role !== 'admin') {
       return { success: false, message: 'Unauthorized.' };
@@ -528,7 +663,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const target = hodAccounts.find(a => a.id === accountId);
     if (!target) return { success: false, message: 'Account not found.' };
 
+    if (target.role === 'admin') {
+      return { success: false, message: 'Cannot deactivate the root Super Admin account.' };
+    }
+
     const newStatus = !target.isActive;
+
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        await supabase.from('hod_accounts').update({ is_active: newStatus }).eq('id', accountId);
+      } catch (err) {
+        console.warn('Supabase remote status update note:', err);
+      }
+    }
+
     setHodAccounts(prev =>
       prev.map(a => a.id === accountId ? { ...a, isActive: newStatus } : a)
     );
@@ -556,8 +704,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const target = hodAccounts.find(a => a.id === accountId);
     if (!target) return { success: false, message: 'Account not found.' };
 
+    if (target.role === 'admin') {
+      return { success: false, message: 'Use master rotation to change Super Admin password.' };
+    }
+
     const newTempPassword = generateTemporaryPassword();
     const newHash = await hashPassword(newTempPassword);
+
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        await supabase.from('hod_accounts').update({ must_change_password: true }).eq('id', accountId);
+      } catch (err) {
+        console.warn('Supabase remote reset note:', err);
+      }
+    }
 
     setHodAccounts(prev =>
       prev.map(a => a.id === accountId ? {
@@ -578,6 +738,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const deleteHodAccount = async (accountId: string): Promise<{ success: boolean; message: string }> => {
     if (currentUser?.role !== 'admin') {
       return { success: false, message: 'Unauthorized.' };
+    }
+
+    const target = hodAccounts.find(a => a.id === accountId);
+    if (!target) return { success: false, message: 'Account not found.' };
+
+    if (target.role === 'admin') {
+      return { success: false, message: 'Cannot delete the Super Admin root account.' };
+    }
+
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        await supabase.from('hod_accounts').delete().eq('id', accountId);
+      } catch (err) {
+        console.warn('Supabase remote delete note:', err);
+      }
     }
 
     setHodAccounts(prev => prev.filter(a => a.id !== accountId));
@@ -617,6 +792,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setupSuperAdminPassword,
         hodAccounts,
         createHodAccount,
+        updateHodAccount,
         toggleHodStatus,
         resetHodPassword,
         deleteHodAccount,
